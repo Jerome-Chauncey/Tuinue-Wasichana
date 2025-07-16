@@ -29,3 +29,7 @@ from backend.models.user import User
 # Instantiate Flask application via factory
 app = create_app()
 jwt = JWTManager(app)
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5555))
+    app.run(host="0.0.0.0", port=port, debug=(os.getenv("FLASK_ENV")!="production"))
