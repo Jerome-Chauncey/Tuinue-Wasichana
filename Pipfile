@@ -13,6 +13,7 @@ sqlalchemy-serializer = "*"
 flask-cors = "*"
 flask-restful = "*"
 dotenv = "*"
+sendgrid = "*"
 
 [dev-packages]
 
