@@ -1,28 +1,27 @@
 import os
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
-from config import create_app, db
+from backend.config import create_app, db
 
-from models.charity import Charity
-from models.beneficiary import Beneficiary
-from models.donation import Donation
-from models.schedule import Schedule
-from models.story import Story
-from models.user import User
+from backend.models.charity import Charity
+from backend.models.beneficiary import Beneficiary
+from backend.models.donation import Donation
+from backend.models.schedule import Schedule
+from backend.models.story import Story
+from backend.models.user import User
 
 from flask_jwt_extended import JWTManager
 app = create_app()
 jwt = JWTManager(app)
 
-from routes.users import users_bp
-from routes.charities import charities_bp
-from routes.donations import donations_bp
-from routes.schedules import schedules_bp
-from routes.stories import stories_bp
-from routes.beneficiaries import beneficiaries_bp
+from backend.routes.users import users_bp
+from backend.routes.charities import charities_bp
+from backend.routes.donations import donations_bp
+from backend.routes.schedules import schedules_bp
+from backend.routes.stories import stories_bp
+from backend.routes.beneficiaries import beneficiaries_bp
 
 app.register_blueprint(users_bp)
 app.register_blueprint(charities_bp)

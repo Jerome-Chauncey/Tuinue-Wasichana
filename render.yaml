@@ -15,20 +15,15 @@ services:
     plan: free
     branch: main
     rootDir: .
-
     buildCommand: |
       pip install --upgrade pip
       pip install python-dotenv gunicorn
       pip install -r requirements.txt
-      # point FLASK_APP at your backend entry-point
       export FLASK_APP=backend/app.py
       flask db upgrade
       python backend/seed.py
-
     startCommand: |
-      # gunicorn will import your app via the 'backend' package
       gunicorn --bind 0.0.0.0:$PORT backend.app:app
-
     envVars:
       - key: DATABASE_URL
         fromDatabase:
