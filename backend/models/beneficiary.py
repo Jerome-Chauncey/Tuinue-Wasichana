@@ -3,7 +3,7 @@ from datetime import datetime
 
 
 class Beneficiary(db.Model):
-    __tabelname__ = 'beneficiaries'
+    __tablename__ = 'beneficiaries'
     id = db.Column(db.Integer, primary_key=True)
     charity_id = db.Column(db.Integer, db.ForeignKey('charities.id'))
     name = db.Column(db.String(120))
