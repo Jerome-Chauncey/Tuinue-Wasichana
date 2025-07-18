@@ -7,7 +7,6 @@ databases:
     user: dbadmin
 
 services:
-  # ─── Flask API ───
   - type: web
     name: Tuinue-Wasichana-API
     env: python
@@ -17,8 +16,8 @@ services:
     rootDir: backend
     buildCommand: |
       pip install --upgrade pip
-      pip install gunicorn
-      pip install -r requirements.txt
+      pip install python-dotenv gunicorn
+      pip install -r ../requirements.txt
       flask db upgrade
       python seed.py
     startCommand: |
@@ -28,6 +27,8 @@ services:
         fromDatabase:
           name: wasichana-db
           property: connectionString
+      - key: FLASK_APP
+        value: app.py
       - key: FLASK_SECRET_KEY
         value: 460afb43de33e919e8b02b35ed4c3e4465ec8c0fb3b7a5fe15f861b3278515c5
       - key: JWT_SECRET_KEY
