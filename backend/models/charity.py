@@ -6,9 +6,9 @@ class Charity(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True)
     name = db.Column(db.String(120), nullable=False)
-    description = db.Column(db.Text)
+    description = db.Column(db.Text, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
     approved = db.Column(db.Boolean, default=False)
-    logo_url = db.Column(db.String)
 
 stories = db.relationship('Story', backref='charity', lazy=True)
 donations = db.relationship('Donation', backref='charity', lazy=True)
