@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-
+from flask import Blueprint
 # Load environment variables from .env
 load_dotenv()
 
@@ -25,6 +25,24 @@ from backend.models.schedule import Schedule
 from backend.models.story import Story
 from backend.models.user import User
 
+# Instantiate app first
+app = create_app()
+jwt = JWTManager(app)
+
+from routes.users import users_bp
+from routes.charities import charities_bp
+from routes.donations import donations_bp
+from routes.schedules import schedules_bp
+from routes.stories import stories_bp
+from routes.beneficiaries import beneficiaries_bp
+
+# Register each route group
+app.register_blueprint(users_bp)
+app.register_blueprint(charities_bp)
+app.register_blueprint(donations_bp)
+app.register_blueprint(schedules_bp)
+app.register_blueprint(stories_bp)
+app.register_blueprint(beneficiaries_bp)
 
 # Instantiate Flask application via factory
 app = create_app()
