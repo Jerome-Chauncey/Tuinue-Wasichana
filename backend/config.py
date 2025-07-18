@@ -53,6 +53,10 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
     api.init_app(app)
+    from backend.resources.auth import Register, Login, Profile
+    api.add_resource(Register, '/api/auth/register')
+    api.add_resource(Login,    '/api/auth/login')
+    api.add_resource(Profile,  '/api/auth/profile')
 
 
 
