@@ -1,106 +1,172 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "../css/Login.css";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("donor"); // Default to donor
+  const [userType, setUserType] = useState("Donor");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
 
-    // Mock API call for testing
-    const mockResponse = {
-      status: 200,
-      data: { access_token: "mock_token", role },
-    };
-    // Uncomment below for actual API call when backend is ready
-    /*
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await response.json();
-      if (response.status === 200) {
-        setSuccess('Login successful! Redirecting...');
-        const role = data.role || 'donor';
-        setTimeout(() => {
-          if (role === 'admin') navigate('/admin');
-          else if (role === 'charity') navigate('/charity');
-          else navigate('/donor');
-        }, 2000);
+    const validCredentials = JSON.parse(
+      localStorage.getItem("validCredentials") || "{}"
+    );
+    const charities = JSON.parse(localStorage.getItem("charities") || "[]");
+
+    if (
+      userType === "Donor" &&
+      email === validCredentials.Donor?.email &&
+      password === validCredentials.Donor?.password
+    ) {
+      localStorage.setItem(
+        "loggedInDonor",
+        JSON.stringify({ email, name: validCredentials.Donor.name })
+      );
+      navigate("/donor-dashboard");
+    } else if (userType === "Charity") {
+      const charity = validCredentials.Charity?.find(
+        (c) => c.email === email && c.password === password
+      );
+      if (charity) {
+        const charityData = charities.find((c) => c.email === email);
+        if (!charityData) {
+          setError("No account exists for this charity");
+        } else if (charityData.status === "pending") {
+          localStorage.setItem(
+            "loggedInCharity",
+            JSON.stringify({ email: charity.email, name: charity.name })
+          );
+          navigate("/charity-pending");
+        } else if (charityData.status === "approved") {
+          localStorage.setItem(
+            "loggedInCharity",
+            JSON.stringify({ email: charity.email, name: charity.name })
+          );
+          navigate("/charity-approved", {
+            state: { charityName: charity.name },
+          });
+        } else if (charityData.status === "rejected") {
+          localStorage.setItem(
+            "loggedInCharity",
+            JSON.stringify({ email: charity.email, name: charity.name })
+          );
+          navigate("/charity-rejected");
+        } else if (charityData.status === "deleted") {
+          setError("No account exists for this charity");
+        }
       } else {
-        setError(data.msg || 'Login failed');
+        setError("Invalid email or password for Charity");
       }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
-    }
-    */
-
-    // Simulate successful login for testing
-    if (email && password && role) {
-      setSuccess("Login successful! Redirecting...");
-      setTimeout(() => {
-        if (role === "admin") navigate("/admin");
-        else if (role === "charity") navigate("/charity");
-        else navigate("/donor");
-      }, 2000);
+    } else if (
+      userType === "Administrator" &&
+      email === validCredentials.Administrator?.email &&
+      password === validCredentials.Administrator?.password
+    ) {
+      localStorage.setItem(
+        "loggedInAdmin",
+        JSON.stringify({ email, name: validCredentials.Administrator.name })
+      );
+      navigate("/admin-dashboard");
     } else {
-      setError("Please fill in all fields");
+      setError("Invalid email or password");
     }
   };
 
   return (
-    <div>
-      <h2>Login - Tuinue Wasichana</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {success && <p style={{ color: "green" }}>{success}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Email:</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+    <div
+      className="relative flex size-full min-h-screen flex-col bg-gray-50 group/design-root overflow-x-hidden"
+      style={{ fontFamily: 'Lexend, "Noto Sans", sans-serif' }}
+    >
+      <div className="layout-container flex h-full grow flex-col">
+        <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7f0f3] px-10 py-3">
+          <div className="flex items-center gap-4 text-[#0e181b]">
+            <h2 className="text-[#0e181b] text-lg font-bold leading-tight tracking-[-0.015em]">
+              Tuinue Wasichana
+            </h2>
+          </div>
+        </header>
+        <div className="px-40 flex flex-1 justify-center py-5">
+          <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+            <h1 className="text-[#0e181b] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+              Login
+            </h1>
+            <div className="px-4 py-3">
+              <form onSubmit={handleSubmit}>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[#0e181b] text-sm font-medium leading-normal">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="form-input h-10 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[#0e181b] text-sm font-medium leading-normal">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="form-input h-10 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[#0e181b] text-sm font-medium leading-normal">
+                      User Type
+                    </label>
+                    <select
+                      value={userType}
+                      onChange={(e) => setUserType(e.target.value)}
+                      className="form-select h-10 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
+                    >
+                      <option value="Donor">Donor</option>
+                      <option value="Charity">Charity</option>
+                      <option value="Administrator">Administrator</option>
+                    </select>
+                  </div>
+                  {error && (
+                    <p className="text-red-500 text-sm font-normal leading-normal">
+                      {error}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#3f9fbf] text-[#0e181b] text-sm font-bold leading-normal tracking-[0.015em]"
+                  >
+                    <span className="truncate">Login</span>
+                  </button>
+                </div>
+              </form>
+              <div className="flex flex-col gap-2 pt-4">
+                <a
+                  href="/donor-signup"
+                  className="text-[#3f9fbf] text-sm font-normal leading-normal hover:underline"
+                >
+                  Sign up as a Donor
+                </a>
+                <a
+                  href="/charity-signup"
+                  className="text-[#3f9fbf] text-sm font-normal leading-normal hover:underline"
+                >
+                  Sign up as a Charity
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <label>Password:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label>Role:</label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            required
-          >
-            <option value="donor">Donor</option>
-            <option value="charity">Charity</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        <button type="submit">Log In</button>
-      </form>
-      <p>
-        New donor? <a href="/donor-signup">Sign Up as a Donor</a>
-      </p>
-      <p>
-        New charity? <a href="/charity-signup">Apply to be a Charity</a>
-      </p>
+      </div>
     </div>
   );
 };

@@ -1,26 +1,35 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import DonorSignup from "./components/DonorSignup";
-import CharitySignup from "./components/CharitySignup";
-import Login from "./components/Login";
 import Home from "./components/Home";
-import DonorDashboard from "./components/DonorDashboard";
-import CharityDashboard from "./components/CharityDashboard";
+import Login from "./components/Login";
 import AdminDashboard from "./components/AdminDashboard";
+import CharityDashboard from "./components/CharityDashboard";
+import CharitySignUp from "./components/CharitySignup";
+import CharityApplicationSubmitted from "./components/CharityApplicationSubmitted";
+import CharityPending from "./components/CharityPending";
+import CharityApproved from "./components/CharityApproved";
+import CharityRejected from "./components/CharityRejected";
+import DonorDashboard from "./components/DonorDashboard"; // Ensure this exists or create a placeholder
 
-function App() {
+const App = () => {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/donor-signup" element={<DonorSignup />} />
-        <Route path="/charity-signup" element={<CharitySignup />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/donor" element={<DonorDashboard />} />
-        <Route path="/charity" element={<CharityDashboard />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/charity-signup" element={<CharitySignUp />} />
+        <Route
+          path="/charity-application-submitted"
+          element={<CharityApplicationSubmitted />}
+        />
+        <Route path="/charity-pending" element={<CharityPending />} />
+        <Route path="/charity-approved" element={<CharityApproved />} />
+        <Route path="/charity-rejected" element={<CharityRejected />} />
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        <Route path="/charity-dashboard" element={<CharityDashboard />} />
+        <Route path="/donor-dashboard" element={<DonorDashboard />} />
       </Routes>
     </BrowserRouter>
   );
-}
+};
 
 export default App;

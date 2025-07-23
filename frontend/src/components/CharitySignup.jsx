@@ -1,106 +1,154 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "../css/Login.css";
 
-const CharitySignup = () => {
-  const [charityName, setCharityName] = useState("");
+const CharitySignUp = () => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [missionStatement, setMissionStatement] = useState("");
+  const [mission, setMission] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
 
-    // Mock API call for testing
-    const mockResponse = { status: 201, data: { msg: "User created" } };
-    // Uncomment below for actual API call when backend is ready
-    /*
-    try {
-      const response = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: charityName,
-          email,
-          password,
-          role: 'charity'
-        })
-      });
-      const data = await response.json();
-      if (response.status === 201) {
-        setSuccess('Application submitted successfully! Awaiting admin approval...');
-        setTimeout(() => navigate('/login'), 2000);
-      } else {
-        setError(data.msg || 'Application failed');
-      }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
-    }
-    */
+    const validCredentials = JSON.parse(
+      localStorage.getItem("validCredentials") || "{}"
+    );
+    const charities = JSON.parse(localStorage.getItem("charities") || "[]");
 
-    // Simulate successful application for testing
-    if (charityName && email && password && missionStatement) {
-      setSuccess(
-        "Application submitted successfully! Awaiting admin approval..."
-      );
-      setTimeout(() => navigate("/login"), 2000);
-    } else {
-      setError("Please fill in all fields");
+    // Check if email is already registered
+    if (validCredentials.Charity?.some((c) => c.email === email)) {
+      setError("Email already registered");
+      return;
     }
+
+    // Generate new charity ID
+    const newId =
+      charities.length > 0 ? Math.max(...charities.map((c) => c.id)) + 1 : 1;
+
+    // Add to charities with pending status
+    const newCharity = {
+      id: newId,
+      name,
+      email,
+      mission,
+      status: "pending",
+      donors: [],
+      beneficiaries: [],
+      oneTimeDonations: [],
+      recurringDonations: [],
+      inventorySent: [],
+      stories: [],
+    };
+    charities.push(newCharity);
+    localStorage.setItem("charities", JSON.stringify(charities));
+
+    // Add to validCredentials.Charity
+    validCredentials.Charity = validCredentials.Charity || [];
+    validCredentials.Charity.push({ email, password, name });
+    localStorage.setItem("validCredentials", JSON.stringify(validCredentials));
+
+    navigate("/charity-application-submitted");
   };
 
   return (
-    <div>
-      <h2>Charity Application - Tuinue Wasichana</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {success && <p style={{ color: "green" }}>{success}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Charity Name:</label>
-          <input
-            type="text"
-            value={charityName}
-            onChange={(e) => setCharityName(e.target.value)}
-            required
-          />
+    <div
+      className="relative flex size-full min-h-screen flex-col bg-gray-50 group/design-root overflow-x-hidden"
+      style={{ fontFamily: 'Lexend, "Noto Sans", sans-serif' }}
+    >
+      <div className="layout-container flex h-full grow flex-col">
+        <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7f0f3] px-10 py-3">
+          <div className="flex items-center gap-4 text-[#0e181b]">
+            <h2 className="text-[#0e181b] text-lg font-bold leading-tight tracking-[-0.015em]">
+              Tuinue Wasichana
+            </h2>
+          </div>
+        </header>
+        <div className="px-40 flex flex-1 justify-center py-5">
+          <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+            <h1 className="text-[#0e181b] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+              Charity Sign Up
+            </h1>
+            <div className="px-4 py-3">
+              <form onSubmit={handleSubmit}>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[#0e181b] text-sm font-medium leading-normal">
+                      Charity Name
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="form-input h-10 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[#0e181b] text-sm font-medium leading-normal">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="form-input h-10 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[#0e181b] text-sm font-medium leading-normal">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="form-input h-10 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[#0e181b] text-sm font-medium leading-normal">
+                      Mission Statement
+                    </label>
+                    <textarea
+                      value={mission}
+                      onChange={(e) => setMission(e.target.value)}
+                      className="form-input h-20 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
+                      required
+                    />
+                  </div>
+                  {error && (
+                    <p className="text-red-500 text-sm font-normal leading-normal">
+                      {error}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#3f9fbf] text-[#0e181b] text-sm font-bold leading-normal tracking-[0.015em]"
+                  >
+                    <span className="truncate">Submit Application</span>
+                  </button>
+                </div>
+              </form>
+              <div className="flex flex-col gap-2 pt-4">
+                <a
+                  href="/login"
+                  className="text-[#3f9fbf] text-sm font-normal leading-normal hover:underline"
+                >
+                  Already have an account? Log In
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <label>Email:</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label>Password:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label>Mission Statement:</label>
-          <textarea
-            value={missionStatement}
-            onChange={(e) => setMissionStatement(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit">Submit Application</button>
-      </form>
-      <p>
-        Already registered? <a href="/login">Log In</a>
-      </p>
+      </div>
     </div>
   );
 };
 
-export default CharitySignup;
+export default CharitySignUp;

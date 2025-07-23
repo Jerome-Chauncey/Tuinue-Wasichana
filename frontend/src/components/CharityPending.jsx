@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import "../css/Login.css";
 
-const DonorDashboard = () => {
+const CharityPending = () => {
   const navigate = useNavigate();
 
   return (
@@ -16,26 +16,23 @@ const DonorDashboard = () => {
               Tuinue Wasichana
             </h2>
           </div>
-          <button
-            onClick={() => {
-              localStorage.removeItem("loggedInDonor");
-              navigate("/");
-            }}
-            className="bg-red-500 text-white px-4 py-2 rounded"
-          >
-            Log Out
-          </button>
         </header>
         <div className="px-40 flex flex-1 justify-center py-5">
           <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
             <h1 className="text-[#0e181b] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-              Donor Dashboard
+              Application Status
             </h1>
             <div className="px-4 py-3">
               <p className="text-[#0e181b] text-sm font-normal leading-normal">
-                Welcome to your Donor Dashboard. Functionality to be
-                implemented.
+                Your application is still awaiting approval from the
+                administrator, please log in at a later time.
               </p>
+              <button
+                onClick={() => navigate("/login")}
+                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#3f9fbf] text-[#0e181b] text-sm font-bold leading-normal tracking-[0.015em] mt-4"
+              >
+                <span className="truncate">Log In</span>
+              </button>
             </div>
           </div>
         </div>
@@ -44,4 +41,4 @@ const DonorDashboard = () => {
   );
 };
 
-export default DonorDashboard;
+export default CharityPending;
