@@ -1,14 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { Route, Routes, Link, useNavigate } from "react-router-dom";
+import {
+  Route,
+  Routes,
+  Link,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import "../css/CharityDashboard.css";
 
 const CharityDashboard = () => {
   console.log("CharityDashboard.jsx loaded");
   const navigate = useNavigate();
+  const location = useLocation();
   const [charity, setCharity] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    console.log("Current route:", location.pathname);
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
 
@@ -39,7 +47,9 @@ const CharityDashboard = () => {
             navigate("/login");
             return;
           }
-          throw new Error("Failed to fetch charity dashboard");
+          throw new Error(
+            `Failed to fetch charity dashboard: ${response.statusText}`
+          );
         }
         const data = await response.json();
         console.log("Fetched data:", data);
@@ -51,7 +61,7 @@ const CharityDashboard = () => {
     };
 
     fetchCharityData();
-  }, [navigate]);
+  }, [navigate]); // Removed location.pathname to prevent redundant fetches
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -65,6 +75,10 @@ const CharityDashboard = () => {
 
   if (error) {
     return <div className="p-4 text-center text-red-500">Error: {error}</div>;
+  }
+
+  if (!charity) {
+    return <div className="p-4 text-center text-[#5c7e8a]">Loading...</div>;
   }
 
   const oneTimeDonations =
@@ -368,7 +382,7 @@ const CharityDashboard = () => {
                 }
               />
               <Route
-                path="/beneficiaries"
+                path="beneficiaries"
                 element={
                   <div className="flex flex-col">
                     <div className="flex flex-wrap justify-between gap-3 p-4">
@@ -422,7 +436,7 @@ const CharityDashboard = () => {
                 }
               />
               <Route
-                path="/inventory-sent"
+                path="inventory-sent"
                 element={
                   <div className="flex flex-col">
                     <div className="flex flex-wrap justify-between gap-3 p-4">
@@ -482,7 +496,7 @@ const CharityDashboard = () => {
                 }
               />
               <Route
-                path="/stories"
+                path="stories"
                 element={
                   <div className="flex flex-col">
                     <div className="flex flex-wrap justify-between gap-3 p-4">
