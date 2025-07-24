@@ -1,4 +1,4 @@
-from .models import db, Charity, Admin, Inventory, Donation, Story
+from backend.models import db, Charity, Admin, Inventory, Donation, Story
 from backend import app
 from faker import Faker
 import random

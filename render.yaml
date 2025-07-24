@@ -20,8 +20,13 @@ services:
       pip install python-dotenv gunicorn
       pip install -r requirements.txt
       export FLASK_APP=backend/app.py
+      # Reset migrations if needed
+      rm -rf migrations/
+      flask db init
+      flask db migrate -m "initial migration"
       flask db upgrade
-      python backend/seed.py
+      # Use absolute path for Python
+      PYTHONPATH=/opt/render/project/src python backend/seed.py
     startCommand: |
       gunicorn --bind 0.0.0.0:$PORT backend.app:app
     envVars:
