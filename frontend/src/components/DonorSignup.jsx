@@ -29,11 +29,12 @@ const DonorSignup = () => {
     // Fetch approved charities
     const fetchCharities = async () => {
       try {
-        const response = await fetch("http://localhost:5003/api/charities", {
+        const response = await fetch("http://localhost:5000/api/charities", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
         });
         if (!response.ok) {
           throw new Error("Failed to fetch charities");
@@ -77,6 +78,7 @@ const DonorSignup = () => {
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify({ name, email, password, anonymous }),
         }
       );
@@ -94,6 +96,7 @@ const DonorSignup = () => {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({ email, password, role: "donor" }),
       });
 
@@ -106,14 +109,14 @@ const DonorSignup = () => {
       localStorage.setItem("role", "donor");
 
       // Submit donation
-      const donationResponse = await fetch("http://localhost:5000/api/donate", {
+      const donationResponse = await fetch("http://localhost:5000/api/donations", {  // Changed from /api/donate
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          charityName: charity,
+          charity_id: charityId,  // You'll need to get this from your form
           amount: parseFloat(amount),
           frequency,
           anonymous,

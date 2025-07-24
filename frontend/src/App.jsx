@@ -11,6 +11,10 @@ import CharityRejected from "./components/CharityRejected";
 import DonorDashboard from "./components/DonorDashboard";
 import DonorSignup from "./components/DonorSignup";
 import ThankYou from "./components/ThankYou";
+import Donations from "./components/Donations";
+import Stories from "./components/Stories";
+import Charities from "./components/Charities";
+import Donate from "./components/Donate"; // New import
 
 const App = () => {
   return (
@@ -19,6 +23,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/charity-signup" element={<CharitySignUp />} />
+        <Route path="/donate" element={<Donate />} /> {/* New route */}
         <Route
           path="/charity-application-submitted"
           element={<CharityApplicationSubmitted />}
@@ -28,7 +33,11 @@ const App = () => {
         <Route path="/charity-rejected" element={<CharityRejected />} />
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/charity-dashboard" element={<CharityDashboard />} />
-        <Route path="/donor-dashboard" element={<DonorDashboard />} />
+        <Route path="/donor-dashboard" element={<DonorDashboard />}>
+          <Route path="donations" element={<Donations />} />
+          <Route path="stories" element={<Stories />} />
+          <Route path="charities" element={<Charities />} />
+        </Route>
         <Route path="/donor-signup" element={<DonorSignup />} />
         <Route path="/thank-you" element={<ThankYou />} />
       </Routes>

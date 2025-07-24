@@ -3,11 +3,15 @@ import { useNavigate, Link } from "react-router-dom";
 import "../css/Login.css";
 
 const CharitySignUp = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [mission, setMission] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    mission: "",
+    location: ""
+  });
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,9 +24,18 @@ const CharitySignUp = () => {
     }
   }, [navigate]);
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setIsSubmitting(true);
 
     try {
       const response = await fetch("http://localhost:5000/api/charity-signup", {
@@ -30,19 +43,26 @@ const CharitySignUp = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, email, password, mission }),
+        body: JSON.stringify(formData),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        if (response.status === 409) {
+        if (response.status === 400) {
+          throw new Error("All required fields must be filled");
+        } else if (response.status === 409) {
           throw new Error("Email already registered");
+        } else {
+          throw new Error(data.error || "Failed to submit application");
         }
-        throw new Error("Failed to submit application");
       }
 
       navigate("/charity-application-submitted");
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -69,49 +89,66 @@ const CharitySignUp = () => {
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-[#0e181b] text-sm font-medium leading-normal">
-                      Charity Name
+                      Charity Name *
                     </label>
                     <input
                       type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
                       className="form-input h-10 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
                       required
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[#0e181b] text-sm font-medium leading-normal">
-                      Email
+                      Email *
                     </label>
                     <input
                       type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
                       className="form-input h-10 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
                       required
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[#0e181b] text-sm font-medium leading-normal">
-                      Password
+                      Password *
                     </label>
                     <input
                       type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
                       className="form-input h-10 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
+                      required
+                      minLength="6"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[#0e181b] text-sm font-medium leading-normal">
+                      Mission Statement *
+                    </label>
+                    <textarea
+                      name="mission"
+                      value={formData.mission}
+                      onChange={handleChange}
+                      className="form-input h-20 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
                       required
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[#0e181b] text-sm font-medium leading-normal">
-                      Mission Statement
+                      Location (City, Country)
                     </label>
-                    <textarea
-                      value={mission}
-                      onChange={(e) => setMission(e.target.value)}
-                      className="form-input h-20 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
-                      required
+                    <input
+                      type="text"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                      className="form-input h-10 px-4 py-2 text-[#0e181b] text-sm font-normal leading-normal bg-white border border-[#d0e1e7] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3f9fbf]"
                     />
                   </div>
                   {error && (
@@ -121,9 +158,12 @@ const CharitySignUp = () => {
                   )}
                   <button
                     type="submit"
-                    className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#3f9fbf] text-[#0e181b] text-sm font-bold leading-normal tracking-[0.015em]"
+                    disabled={isSubmitting}
+                    className={`flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#3f9fbf] text-[#0e181b] text-sm font-bold leading-normal tracking-[0.015em] ${isSubmitting ? "opacity-70" : ""}`}
                   >
-                    <span className="truncate">Submit Application</span>
+                    <span className="truncate">
+                      {isSubmitting ? "Submitting..." : "Submit Application"}
+                    </span>
                   </button>
                 </div>
               </form>

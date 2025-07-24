@@ -1,63 +1,80 @@
-# backend/resources/auth.py
 from flask_restful import Resource, reqparse
-from flask import jsonify
-from flask_jwt_extended import (
-    create_access_token, jwt_required, get_jwt_identity
-)
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from backend.config import db
-from backend.models.user import User
+from backend.models import Donor, Charity, Admin
 
-#request parsers
-_register_parser = reqparse.RequestParser()
-_register_parser.add_argument('full_name', required=True, help='full_name is required')
-_register_parser.add_argument('email',     required=True, help='email is required')
-_register_parser.add_argument('password',  required=True, help='password is required')
-_register_parser.add_argument('role',      required=True, help='role is required')
+# Request parsers
+register_parser = reqparse.RequestParser()
+register_parser.add_argument('email', required=True, help='Email is required')
+register_parser.add_argument('password', required=True, help='Password is required')
+register_parser.add_argument('name', required=True, help='Name is required')
+register_parser.add_argument('role', required=True, help='Role is required')
 
-_login_parser = reqparse.RequestParser()
-_login_parser.add_argument('email',    required=True, help='email is required')
-_login_parser.add_argument('password', required=True, help='password is required')
-
+login_parser = reqparse.RequestParser()
+login_parser.add_argument('email', required=True, help='Email is required')
+login_parser.add_argument('password', required=True, help='Password is required')
 
 class Register(Resource):
     def post(self):
-        args = _register_parser.parse_args()
-        if User.query.filter_by(email=args['email']).first():
-            return {"msg": "Email already registered"}, 409
-
-        user = User(
-            full_name=args['full_name'],
-            email=args['email'],
-            role=args['role']
-        )
-        user.set_password(args['password'])
+        data = register_parser.parse_args()
+        
+        if data['role'] == 'donor' and Donor.query.filter_by(email=data['email']).first():
+            return {'message': 'Donor already exists'}, 400
+        elif data['role'] == 'charity' and Charity.query.filter_by(email=data['email']).first():
+            return {'message': 'Charity already exists'}, 400
+        
+        if data['role'] == 'donor':
+            user = Donor(email=data['email'], name=data['name'])
+        elif data['role'] == 'charity':
+            user = Charity(email=data['email'], name=data['name'])
+        else:
+            return {'message': 'Invalid role'}, 400
+            
+        user.set_password(data['password'])
         db.session.add(user)
         db.session.commit()
-        return {"msg": "User created"}, 201
-
+        
+        return {'message': f'{data["role"].capitalize()} created successfully'}, 201
 
 class Login(Resource):
     def post(self):
-        args = _login_parser.parse_args()
-        user = User.query.filter_by(email=args['email']).first()
-        if not user or not user.check_password(args['password']):
-            return {"msg": "Bad email or password"}, 401
-
-        token = create_access_token(
-            identity=user.id,
-            additional_claims={"role": user.role}
-        )
-        return {"access_token": token}, 200
-
+        data = login_parser.parse_args()
+        
+        # Try all user types
+        user = Donor.query.filter_by(email=data['email']).first() or \
+               Charity.query.filter_by(email=data['email']).first() or \
+               Admin.query.filter_by(email=data['email']).first()
+        
+        if not user or not user.check_password(data['password']):
+            return {'message': 'Invalid credentials'}, 401
+            
+        access_token = create_access_token(identity={
+            'email': user.email,
+            'role': 'donor' if isinstance(user, Donor) else 
+                   'charity' if isinstance(user, Charity) else 'admin'
+        })
+        
+        return {'access_token': access_token}, 200
 
 class Profile(Resource):
     @jwt_required()
     def get(self):
-        user_id = get_jwt_identity()
-        user = User.query.get_or_404(user_id)
+        identity = get_jwt_identity()
+        role = identity['role']
+        email = identity['email']
+        
+        if role == 'donor':
+            user = Donor.query.filter_by(email=email).first()
+        elif role == 'charity':
+            user = Charity.query.filter_by(email=email).first()
+        else:
+            user = Admin.query.filter_by(email=email).first()
+            
+        if not user:
+            return {'message': 'User not found'}, 404
+            
         return {
-            "id": user.id,
-            "full_name": user.full_name,
-            "email": user.email,
-            "role": user.role
+            'email': user.email,
+            'name': user.name,
+            'role': role
         }, 200

@@ -74,7 +74,7 @@ const CreateStory = () => {
     if (image) form.append("image", image);
 
     try {
-      const response = await fetch("http://localhost:5003/api/create-story", {
+      const response = await fetch("http://localhost:5000/api/create-story", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

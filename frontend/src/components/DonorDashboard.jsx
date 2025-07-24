@@ -7,47 +7,39 @@ const DonorDashboard = () => {
   const [donor, setDonor] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
-
-    // Check if user is logged in as a donor
-    if (!token || role !== "donor") {
-      navigate("/login");
-      return;
-    }
-
-    // Fetch donor data from backend
-    const fetchDonorData = async () => {
-      try {
-        const response = await fetch(
-          "http://localhost:5000/api/donor-dashboard",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        if (!response.ok) {
-          if (response.status === 403 || response.status === 404) {
-            localStorage.removeItem("token");
-            localStorage.removeItem("role");
-            navigate("/login");
-            return;
-          }
-          throw new Error("Failed to fetch donor dashboard");
+useEffect(() => {
+  const fetchDonorData = async () => {
+    const token = localStorage.getItem("token"); // Get token from storage
+    
+    try {
+      const response = await fetch("http://localhost:5000/api/donor-dashboard", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
         }
-        const data = await response.json();
-        setDonor(data);
-      } catch (err) {
-        setError(err.message);
-      }
-    };
+      });
 
-    fetchDonorData();
-  }, [navigate]);
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired or invalid
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          navigate("/login");
+          return;
+        }
+        throw new Error("Failed to fetch donor data");
+      }
+
+      const data = await response.json();
+      setDonor(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  fetchDonorData();
+}, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
