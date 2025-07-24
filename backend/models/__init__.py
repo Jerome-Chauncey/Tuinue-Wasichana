@@ -1,3 +1,5 @@
+from backend.config import db
+
 from .admin import Admin
 from .beneficiary import Beneficiary
 from .charity import Charity
@@ -8,6 +10,7 @@ from .story import Story
 from .donor_charity import donors_charities
 
 __all__ = [
+    'db',
     'Admin',
     'Beneficiary',
     'Charity',
