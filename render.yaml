@@ -20,14 +20,34 @@ buildCommand: |
   pip install python-dotenv gunicorn
   pip install -r requirements.txt
   export FLASK_APP=backend/config.py
-  # Reset migrations
+  
+  # Nuclear option - completely reset database state
+  flask db downgrade base 2>/dev/null || true
   rm -rf migrations/
+  DROP_DB=1 python -c "
+  import os
+  from backend.app import app
+  from backend.models import db
+  with app.app_context():
+      if os.getenv('DROP_DB'):
+          db.drop_all()
+      db.create_all()
+  "
+  
+  # Initialize fresh migrations
   flask db init
   flask db migrate -m "initial migration"
   flask db upgrade
-  # Install faker explicitly (temporary measure)
-  pip install faker
-  # Run seed script
+  
+  # Verify schema
+  PYTHONPATH=/opt/render/project/src python -c "
+  from backend.app import app
+  from backend.models import db, Charity
+  with app.app_context():
+      print('Charity columns:', [c.name for c in Charity.__table__.columns])
+  "
+  
+  # Run seed
   PYTHONPATH=/opt/render/project/src python backend/seed.py
 
 
