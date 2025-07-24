@@ -1,97 +1,79 @@
 from backend.models import db, Charity, Admin, Inventory, Donation, Story
-from backend import app
+from backend.app import app  
 from faker import Faker
 import random
 
 fake = Faker()
 
 def seed_database():
+    print("Starting database seeding...")
+    
     with app.app_context():
-        print("Seeding database...")
-
-        Story.query.delete()
-        Donation.query.delete()
-        Inventory.query.delete()
-        Admin.query.delete()
-        Charity.query.delete()
-
+        db.session.query(Story).delete()
+        db.session.query(Donation).delete()
+        db.session.query(Inventory).delete()
+        db.session.query(Admin).delete()
+        db.session.query(Charity).delete()
         db.session.commit()
 
-        charities_data = [
-            {
-                "name": "Tuinue Wasichana Initiative",
-                "email": "info@tuinuewasichana.org",
-                "password": "secure123",
-                "location": "Nairobi, Kenya",
-                "mission": "Empowering girls through menstrual hygiene support and education.",
-                "status": "Active"
-            },
-            {
-                "name": "Pads for Progress",
-                "email": "pads@progress.org",
-                "password": "pads123",
-                "location": "Mombasa, Kenya",
-                "mission": "Providing access to menstrual products for underprivileged girls.",
-                "status": "Active"
-            }
-        ]
-
-        charity_objs = []
-        for data in charities_data:
-            charity = Charity(
-                name=data["name"],
-                email=data["email"],
-                location=data["location"],
-                mission=data["mission"],
-                status=data["status"]
+        charities = [
+            Charity(
+                name="Tuinue Wasichana Initiative",
+                email="info@tuinuewasichana.org",
+                location="Nairobi, Kenya",
+                mission="Empowering girls through menstrual hygiene support and education.",
+                status="Active"
+            ),
+            Charity(
+                name="Pads for Progress",
+                email="pads@progress.org",
+                location="Mombasa, Kenya",
+                mission="Providing access to menstrual products for underprivileged girls.",
+                status="Active"
             )
-            charity.set_password(data["password"]) 
+        ]
+        
+        for charity in charities:
+            charity.set_password("securepassword123")
             db.session.add(charity)
-            charity_objs.append(charity)
-
+        
         db.session.commit()
-
+        
         admin = Admin(
             username="admin1",
-            email="admin@tuinue.org",
+            email="admin@tuinue.org"
         )
-        admin.set_password("adminpass123") 
+        admin.set_password("adminpass123")
         db.session.add(admin)
         db.session.commit()
-
+        
         inventory_items = ["Sanitary Pads", "Soap", "Toothpaste", "Toothbrush", "Tissue", "Underwear"]
         for _ in range(10):
-            item = Inventory(
+            db.session.add(Inventory(
                 name=random.choice(inventory_items),
                 quantity=random.randint(10, 100),
                 description=fake.sentence(),
-                charity_id=random.choice(charity_objs).id
-            )
-            db.session.add(item)
-
-        db.session.commit()
-
+                charity_id=random.choice([c.id for c in charities])
+            ))
+        
         for _ in range(10):
-            donation = Donation(
+            db.session.add(Donation(
                 donor_name=fake.name(),
                 amount=random.randint(500, 5000),
                 message=fake.sentence(),
-                charity_id=random.choice(charity_objs).id
-            )
-            db.session.add(donation)
-
-        db.session.commit()
-
+                charity_id=random.choice([c.id for c in charities])
+            ))
+        
         for _ in range(5):
-            story = Story(
+            db.session.add(Story(
                 title=fake.sentence(nb_words=6),
                 content=fake.paragraph(nb_sentences=5),
-                charity_id=random.choice(charity_objs).id
-            )
-            db.session.add(story)
-
+                charity_id=random.choice([c.id for c in charities])
+            ))
+        
         db.session.commit()
-        print("Done seeding!")
+    
+    print("Database seeded successfully!")
 
 if __name__ == "__main__":
     seed_database()

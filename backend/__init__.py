@@ -1,3 +1,12 @@
 from .config import app, db
 
-__all__ = ['app', 'db']
+# Export models
+from .models import (
+    charity, 
+    beneficiary, 
+    donor, 
+    admin, 
+    donation, 
+    inventory, 
+    story
+)

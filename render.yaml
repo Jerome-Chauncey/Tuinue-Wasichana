@@ -1,4 +1,3 @@
-
 databases:
   - name: wasichana-db
     region: oregon
@@ -14,45 +13,30 @@ services:
     plan: free
     branch: main
     rootDir: .
+    buildCommand: |
+      pip install --upgrade pip
+      pip install python-dotenv gunicorn
+      pip install -r requirements.txt
+      
+      # Initialize database
+      export FLASK_APP=backend.config
+      flask db init
+      flask db migrate -m "initial migration"
+      
+      # Create tables
+      PYTHONPATH=/opt/render/project/src python -c "
+      from backend.config import create_app
+      app = create_app()
+      with app.app_context():
+          from backend.models import db
+          db.create_all()
+      "
+      
+      # Seed database
+      PYTHONPATH=/opt/render/project/src python backend/seed.py
 
-buildCommand: |
-  pip install --upgrade pip
-  pip install python-dotenv gunicorn
-  pip install -r requirements.txt
-  export FLASK_APP=backend/config.py
-  
-  # Nuclear option - completely reset database state
-  flask db downgrade base 2>/dev/null || true
-  rm -rf migrations/
-  DROP_DB=1 python -c "
-  import os
-  from backend.app import app
-  from backend.models import db
-  with app.app_context():
-      if os.getenv('DROP_DB'):
-          db.drop_all()
-      db.create_all()
-  "
-  
-  # Initialize fresh migrations
-  flask db init
-  flask db migrate -m "initial migration"
-  flask db upgrade
-  
-  # Verify schema
-  PYTHONPATH=/opt/render/project/src python -c "
-  from backend.app import app
-  from backend.models import db, Charity
-  with app.app_context():
-      print('Charity columns:', [c.name for c in Charity.__table__.columns])
-  "
-  
-  # Run seed
-  PYTHONPATH=/opt/render/project/src python backend/seed.py
-
-
-startCommand: |
-  PYTHONPATH=/opt/render/project/src gunicorn --bind 0.0.0.0:$PORT backend.app:app
+    startCommand: |
+      gunicorn --bind 0.0.0.0:$PORT 'backend.config:create_app()'
     envVars:
       - key: DATABASE_URL
         fromDatabase:
