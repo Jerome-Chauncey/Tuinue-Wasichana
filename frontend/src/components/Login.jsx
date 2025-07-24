@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/Login.css";
 
@@ -9,71 +9,103 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    // Redirect to appropriate dashboard if already logged in
+    if (token && role === "donor") {
+      navigate("/donor-dashboard");
+    } else if (token && role === "charity") {
+      // Charity status check requires async call to /api/charity-status
+      const checkCharityStatus = async () => {
+        try {
+          const response = await fetch(
+            "http://localhost:5003/api/charity-status",
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          if (response.ok) {
+            const { status } = await response.json();
+            if (status === "approved") {
+              navigate("/charity-approved");
+            } else if (status === "pending") {
+              navigate("/charity-pending");
+            } else if (status === "rejected") {
+              navigate("/charity-rejected");
+            }
+          } else {
+            setError("Failed to verify charity status");
+          }
+        } catch (err) {
+          setError("Error checking charity status");
+        }
+      };
+      if (role === "charity") {
+        checkCharityStatus();
+      }
+    } else if (token && role === "admin") {
+      navigate("/admin-dashboard");
+    }
+  }, [navigate]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    const validCredentials = JSON.parse(
-      localStorage.getItem("validCredentials") || "{}"
-    );
-    const charities = JSON.parse(localStorage.getItem("charities") || "[]");
+    try {
+      const response = await fetch("http://localhost:5003/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          role: userType.toLowerCase(),
+        }),
+      });
 
-    if (
-      userType === "Donor" &&
-      email === validCredentials.Donor?.email &&
-      password === validCredentials.Donor?.password
-    ) {
-      localStorage.setItem(
-        "loggedInDonor",
-        JSON.stringify({ email, name: validCredentials.Donor.name })
-      );
-      navigate("/donor-dashboard");
-    } else if (userType === "Charity") {
-      const charity = validCredentials.Charity?.find(
-        (c) => c.email === email && c.password === password
-      );
-      if (charity) {
-        const charityData = charities.find((c) => c.email === email);
-        if (!charityData) {
-          setError("No account exists for this charity");
-        } else if (charityData.status === "pending") {
-          localStorage.setItem(
-            "loggedInCharity",
-            JSON.stringify({ email: charity.email, name: charity.name })
-          );
-          navigate("/charity-pending");
-        } else if (charityData.status === "approved") {
-          localStorage.setItem(
-            "loggedInCharity",
-            JSON.stringify({ email: charity.email, name: charity.name })
-          );
-          navigate("/charity-approved", {
-            state: { charityName: charity.name },
-          });
-        } else if (charityData.status === "rejected") {
-          localStorage.setItem(
-            "loggedInCharity",
-            JSON.stringify({ email: charity.email, name: charity.name })
-          );
-          navigate("/charity-rejected");
-        } else if (charityData.status === "deleted") {
-          setError("No account exists for this charity");
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Invalid email or password");
+        } else if (response.status === 403) {
+          const { error } = await response.json();
+          throw new Error(error);
+        } else {
+          throw new Error("Login failed");
         }
-      } else {
-        setError("Invalid email or password for Charity");
       }
-    } else if (
-      userType === "Administrator" &&
-      email === validCredentials.Administrator?.email &&
-      password === validCredentials.Administrator?.password
-    ) {
-      localStorage.setItem(
-        "loggedInAdmin",
-        JSON.stringify({ email, name: validCredentials.Administrator.name })
-      );
-      navigate("/admin-dashboard");
-    } else {
-      setError("Invalid email or password");
+
+      const { token, role, charityStatus } = await response.json();
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", role);
+
+      if (role === "donor") {
+        navigate("/donor-dashboard");
+      } else if (role === "charity") {
+        if (charityStatus === "approved") {
+          navigate("/charity-approved");
+        } else if (charityStatus === "pending") {
+          navigate("/charity-pending");
+        } else if (charityStatus === "rejected") {
+          navigate("/charity-rejected");
+        } else {
+          setError("Invalid charity status");
+        }
+      } else if (role === "admin") {
+        navigate("/admin-dashboard");
+      } else {
+        setError("Invalid user role");
+      }
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -133,7 +165,7 @@ const Login = () => {
                     >
                       <option value="Donor">Donor</option>
                       <option value="Charity">Charity</option>
-                      <option value="Administrator">Administrator</option>
+                      <option value="Admin">Admin</option>
                     </select>
                   </div>
                   {error && (

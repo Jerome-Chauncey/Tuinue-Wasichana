@@ -1,14 +1,100 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/ThankYou.css";
 
 const ThankYou = () => {
   const navigate = useNavigate();
-  const donation = JSON.parse(localStorage.getItem("donorDonation") || "{}");
+  const [donation, setDonation] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    // Redirect to login if not a logged-in donor
+    if (!token || role !== "donor") {
+      navigate("/login");
+      return;
+    }
+
+    // Fetch the most recent donation
+    const fetchLastDonation = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/last-donation",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch donation details");
+        }
+        const data = await response.json();
+        setDonation(data);
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    fetchLastDonation();
+  }, [navigate]);
+
+  if (error) {
+    return (
+      <div
+        className="relative flex size-full min-h-screen flex-col bg-[#f8fbfc] group/design-root overflow-x-hidden"
+        style={{ fontFamily: 'Lexend, "Noto Sans", sans-serif' }}
+      >
+        <div className="layout-container flex h-full grow flex-col">
+          <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7f0f3] px-10 py-3">
+            <h2 className="text-[#0e181b] text-lg font-bold leading-tight tracking-[-0.015em]">
+              Tuinue Wasichana
+            </h2>
+          </header>
+          <div className="px-40 flex flex-1 justify-center py-5">
+            <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+              <p className="text-red-500 text-sm font-normal leading-normal px-4 py-3">
+                Error: {error}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!donation) {
+    return (
+      <div
+        className="relative flex size-full min-h-screen flex-col bg-[#f8fbfc] group/design-root overflow-x-hidden"
+        style={{ fontFamily: 'Lexend, "Noto Sans", sans-serif' }}
+      >
+        <div className="layout-container flex h-full grow flex-col">
+          <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7f0f3] px-10 py-3">
+            <h2 className="text-[#0e181b] text-lg font-bold leading-tight tracking-[-0.015em]">
+              Tuinue Wasichana
+            </h2>
+          </header>
+          <div className="px-40 flex flex-1 justify-center py-5">
+            <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+              <p className="text-[#0e181b] text-sm font-normal leading-normal px-4 py-3">
+                Loading donation details...
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const { name, amount, charity, frequency } = donation;
 
-  const handleLogin = () => {
-    navigate("/login");
+  const handleDashboard = () => {
+    navigate("/donor-dashboard");
   };
 
   return (
@@ -63,10 +149,10 @@ const ThankYou = () => {
             <div className="flex justify-center">
               <div className="flex flex-1 gap-3 flex-wrap px-4 py-3 max-w-[480px] justify-center">
                 <button
-                  onClick={handleLogin}
+                  onClick={handleDashboard}
                   className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#19b2e5] text-[#0e181b] text-sm font-bold leading-normal tracking-[0.015em] grow"
                 >
-                  <span className="truncate">Log In to View Dashboard</span>
+                  <span className="truncate">View Dashboard</span>
                 </button>
               </div>
             </div>

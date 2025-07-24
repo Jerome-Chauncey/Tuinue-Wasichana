@@ -1,8 +1,19 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/Login.css";
 
 const CharityApproved = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    // Redirect to charity dashboard if already logged in as a charity
+    if (token && role === "charity") {
+      navigate("/charity-dashboard");
+    }
+  }, [navigate]);
 
   return (
     <div

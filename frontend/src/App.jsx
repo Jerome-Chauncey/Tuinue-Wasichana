@@ -8,7 +8,9 @@ import CharityApplicationSubmitted from "./components/CharityApplicationSubmitte
 import CharityPending from "./components/CharityPending";
 import CharityApproved from "./components/CharityApproved";
 import CharityRejected from "./components/CharityRejected";
-import DonorDashboard from "./components/DonorDashboard"; // Ensure this exists or create a placeholder
+import DonorDashboard from "./components/DonorDashboard";
+import DonorSignup from "./components/DonorSignup";
+import ThankYou from "./components/ThankYou";
 
 const App = () => {
   return (
@@ -27,6 +29,8 @@ const App = () => {
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/charity-dashboard" element={<CharityDashboard />} />
         <Route path="/donor-dashboard" element={<DonorDashboard />} />
+        <Route path="/donor-signup" element={<DonorSignup />} />
+        <Route path="/thank-you" element={<ThankYou />} />
       </Routes>
     </BrowserRouter>
   );

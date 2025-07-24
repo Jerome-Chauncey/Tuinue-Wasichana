@@ -1,43 +1,77 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 const Home = () => {
-  // Static charity data
-  const [charities] = useState([
-    {
-      id: 1,
-      name: "Hope for Girls",
-      email: "hopeforgirls@example.com",
-      mission: "Providing sanitary towels to girls in rural Kenya.",
-      image:
-        "https://hopeforgirlsandwomen.files.wordpress.com/2018/02/flip-flops.jpg",
-    },
-    {
-      id: 2,
-      name: "Empower Sisters",
-      email: "empowersisters@example.com",
-      mission: "Building toilets for schools in underserved areas.",
-      image:
-        "https://peacekeeping.un.org/sites/default/files/styles/1200x500/public/field/image/school_mali_2013.jpg?itok=F1aMigvg",
-    },
-    {
-      id: 3,
-      name: "Bright Future",
-      email: "brightfuture@example.com",
-      mission: "Ensuring menstrual hygiene education for young girls.",
-      image:
-        "https://voodooneon.com/cdn/shop/files/the-future-is-bright-multi-color.jpg?v=1699932212&width=2000",
-    },
-  ]);
+  const navigate = useNavigate();
+  const [charities, setCharities] = useState([]);
+  const [error, setError] = useState("");
 
-  // // Uncomment when backend is ready
-  // const [charities, setCharities] = useState([]);
-  // useEffect(() => {
-  //   fetch('/api/charities')
-  //     .then(response => response.json())
-  //     .then(data => setCharities(data))
-  //     .catch(error => console.error('Error fetching charities:', error));
-  // }, []);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    // Redirect to appropriate dashboard if logged in
+    if (token && role === "donor") {
+      navigate("/donor-dashboard");
+      return;
+    } else if (token && role === "charity") {
+      navigate("/charity-dashboard");
+      return;
+    }
+
+    // Fetch up to 3 approved charities
+    const fetchCharities = async () => {
+      try {
+        const response = await fetch("http://localhost:5003/api/charities", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch charities");
+        }
+        const data = await response.json();
+        console.log("Fetched charities:", data); // Log data for debugging
+        setCharities(data.slice(0, 3)); // Limit to 3 charities
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    fetchCharities();
+  }, [navigate]);
+
+  if (error) {
+    return (
+      <div className="relative flex size-full min-h-screen flex-col bg-[#f9f8fc] group/design-root overflow-x-hidden">
+        <div className="layout-container flex h-full grow flex-col">
+          <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#ebe7f3] px-10 py-3">
+            <div className="flex items-center gap-4 text-[#120e1b]">
+              <h2 className="text-[#120e1b] text-lg font-bold leading-tight tracking-[-0.015em]">
+                Tuinue Wasichana
+              </h2>
+            </div>
+            <div className="flex flex-1 justify-end gap-8">
+              <Link
+                to="/login"
+                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#ebe7f3] text-[#120e1b] text-sm font-bold leading-normal tracking-[0.015em]"
+              >
+                <span className="truncate">Login</span>
+              </Link>
+            </div>
+          </header>
+          <div className="px-40 flex flex-1 justify-center py-5">
+            <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+              <p className="text-red-500 text-sm font-normal leading-normal px-4 py-3">
+                Error: {error}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex size-full min-h-screen flex-col bg-[#f9f8fc] group/design-root overflow-x-hidden">
@@ -107,15 +141,28 @@ const Home = () => {
                       <p className="text-[#120e1b] text-base font-bold leading-tight">
                         {charity.name}
                       </p>
-                      <p className="text-[#654e97] text-sm font-normal leading-normal">
-                        {charity.mission}
+                      <p
+                        className="text-[#654e97] text-sm font-normal leading-normal"
+                        style={{ minHeight: "20px", padding: "4px" }}
+                      >
+                        {charity.mission || "Mission not available"}
                       </p>
                     </div>
                   </div>
-                  <div
-                    className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-lg flex-1"
-                    style={{ backgroundImage: `url("${charity.image}")` }}
-                  ></div>
+                  <div className="flex-1">
+                    {charity.image ? (
+                      <img
+                        src={charity.image}
+                        alt={charity.name}
+                        className="w-full h-auto rounded-lg"
+                        style={{ maxHeight: "200px", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <p className="text-[#654e97] text-sm font-normal leading-normal">
+                        No image available
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

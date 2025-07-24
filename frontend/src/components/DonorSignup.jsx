@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/DonorSignup.css";
 
@@ -13,10 +13,40 @@ const DonorSignup = () => {
     frequency: "one-time",
     anonymous: false,
   });
+  const [charities, setCharities] = useState([]);
+  const [error, setError] = useState("");
 
-  const charities = JSON.parse(
-    localStorage.getItem("charities") || "[]"
-  ).filter((c) => c.status === "approved");
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    // Redirect to dashboard if already logged in as a donor
+    if (token && role === "donor") {
+      navigate("/donor-dashboard");
+      return;
+    }
+
+    // Fetch approved charities
+    const fetchCharities = async () => {
+      try {
+        const response = await fetch("http://localhost:5003/api/charities", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch charities");
+        }
+        const data = await response.json();
+        setCharities(data);
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    fetchCharities();
+  }, [navigate]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -26,73 +56,103 @@ const DonorSignup = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+
     const { name, email, password, charity, amount, frequency, anonymous } =
       formData;
 
-    // Validate form
     if (!name || !email || !password || !charity || !amount) {
-      alert("Please fill in all fields");
+      setError("Please fill in all fields");
       return;
     }
 
-    // Update localStorage
-    const charitiesData = JSON.parse(localStorage.getItem("charities") || "[]");
-    const selectedCharity = charitiesData.find((c) => c.name === charity);
-    if (!selectedCharity) {
-      alert("Invalid charity selected");
-      return;
+    try {
+      // Register donor
+      const signupResponse = await fetch(
+        "http://localhost:5000/api/donor-signup",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name, email, password, anonymous }),
+        }
+      );
+
+      if (!signupResponse.ok) {
+        if (signupResponse.status === 409) {
+          throw new Error("Email already registered");
+        }
+        throw new Error("Failed to register donor");
+      }
+
+      // Log in donor to get token
+      const loginResponse = await fetch("http://localhost:5000/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, role: "donor" }),
+      });
+
+      if (!loginResponse.ok) {
+        throw new Error("Failed to log in after signup");
+      }
+
+      const { token } = await loginResponse.json();
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", "donor");
+
+      // Submit donation
+      const donationResponse = await fetch("http://localhost:5000/api/donate", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          charityName: charity,
+          amount: parseFloat(amount),
+          frequency,
+          anonymous,
+        }),
+      });
+
+      if (!donationResponse.ok) {
+        throw new Error("Failed to process donation");
+      }
+
+      navigate("/thank-you");
+    } catch (err) {
+      setError(err.message);
     }
-
-    const donation = {
-      donor: anonymous ? "Anonymous" : name,
-      email: anonymous ? "anonymous@email.com" : email,
-      amount: `$${parseFloat(amount).toFixed(2)}`,
-      date:
-        frequency === "one-time"
-          ? new Date().toISOString().split("T")[0]
-          : undefined,
-      startDate:
-        frequency === "monthly"
-          ? new Date().toISOString().split("T")[0]
-          : undefined,
-      billingDate:
-        frequency === "monthly"
-          ? new Date(new Date().setMonth(new Date().getMonth() + 1))
-              .toISOString()
-              .split("T")[0]
-          : undefined,
-    };
-
-    if (frequency === "one-time") {
-      selectedCharity.oneTimeDonations.push(donation);
-    } else {
-      selectedCharity.recurringDonations.push(donation);
-    }
-
-    localStorage.setItem("charities", JSON.stringify(charitiesData));
-
-    const validCredentials = JSON.parse(
-      localStorage.getItem("validCredentials") || "{}"
-    );
-    validCredentials.Donor = validCredentials.Donor || [];
-    validCredentials.Donor.push({ email, password });
-    localStorage.setItem("validCredentials", JSON.stringify(validCredentials));
-
-    localStorage.setItem(
-      "donorDonation",
-      JSON.stringify({
-        name: anonymous ? "Anonymous" : name,
-        amount: donation.amount,
-        charity,
-        frequency,
-      })
-    );
-
-    localStorage.setItem("loggedInDonorEmail", email);
-    navigate("/thank-you");
   };
+
+  if (error) {
+    return (
+      <div
+        className="relative flex size-full min-h-screen flex-col bg-gray-50 group/design-root overflow-x-hidden"
+        style={{ fontFamily: 'Lexend, "Noto Sans", sans-serif' }}
+      >
+        <div className="layout-container flex h-full grow flex-col">
+          <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#eaeff1] px-10 py-3">
+            <h2 className="text-[#101618] text-lg font-bold leading-tight tracking-[-0.015em]">
+              Tuinue Wasichana
+            </h2>
+          </header>
+          <div className="px-40 flex flex-1 justify-center py-5">
+            <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+              <p className="text-red-500 text-sm font-normal leading-normal px-4 py-3">
+                Error: {error}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import "../css/Login.css";
 
 const CharitySignUp = () => {
@@ -10,48 +10,40 @@ const CharitySignUp = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    // Redirect to dashboard if already logged in as a charity
+    if (token && role === "charity") {
+      navigate("/charity-dashboard");
+    }
+  }, [navigate]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    const validCredentials = JSON.parse(
-      localStorage.getItem("validCredentials") || "{}"
-    );
-    const charities = JSON.parse(localStorage.getItem("charities") || "[]");
+    try {
+      const response = await fetch("http://localhost:5000/api/charity-signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email, password, mission }),
+      });
 
-    // Check if email is already registered
-    if (validCredentials.Charity?.some((c) => c.email === email)) {
-      setError("Email already registered");
-      return;
+      if (!response.ok) {
+        if (response.status === 409) {
+          throw new Error("Email already registered");
+        }
+        throw new Error("Failed to submit application");
+      }
+
+      navigate("/charity-application-submitted");
+    } catch (err) {
+      setError(err.message);
     }
-
-    // Generate new charity ID
-    const newId =
-      charities.length > 0 ? Math.max(...charities.map((c) => c.id)) + 1 : 1;
-
-    // Add to charities with pending status
-    const newCharity = {
-      id: newId,
-      name,
-      email,
-      mission,
-      status: "pending",
-      donors: [],
-      beneficiaries: [],
-      oneTimeDonations: [],
-      recurringDonations: [],
-      inventorySent: [],
-      stories: [],
-    };
-    charities.push(newCharity);
-    localStorage.setItem("charities", JSON.stringify(charities));
-
-    // Add to validCredentials.Charity
-    validCredentials.Charity = validCredentials.Charity || [];
-    validCredentials.Charity.push({ email, password, name });
-    localStorage.setItem("validCredentials", JSON.stringify(validCredentials));
-
-    navigate("/charity-application-submitted");
   };
 
   return (
@@ -136,12 +128,12 @@ const CharitySignUp = () => {
                 </div>
               </form>
               <div className="flex flex-col gap-2 pt-4">
-                <a
-                  href="/login"
+                <Link
+                  to="/login"
                   className="text-[#3f9fbf] text-sm font-normal leading-normal hover:underline"
                 >
                   Already have an account? Log In
-                </a>
+                </Link>
               </div>
             </div>
           </div>

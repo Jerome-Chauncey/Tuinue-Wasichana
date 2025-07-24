@@ -7,31 +7,56 @@ const CreateStory = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    image: "",
     donor: "",
     beneficiary: "",
     inventory: "",
   });
+  const [imageFile, setImageFile] = useState(null);
   const [charity, setCharity] = useState(null);
   const [donors, setDonors] = useState([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const email = localStorage.getItem("loggedInCharityEmail");
-    const charities = JSON.parse(localStorage.getItem("charities") || "[]");
-    const selectedCharity = charities.find(
-      (c) => c.email === email && c.status === "approved"
-    );
-    if (!selectedCharity) {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    // Redirect to login if not logged in as a charity
+    if (!token || role !== "charity") {
       navigate("/login");
       return;
     }
-    setCharity(selectedCharity);
-    setDonors([
-      ...new Set([
-        ...selectedCharity.oneTimeDonations.map((d) => d.donor),
-        ...selectedCharity.recurringDonations.map((d) => d.donor),
-      ]),
-    ]);
+
+    // Fetch charity data for donors
+    const fetchCharityData = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/charity-dashboard",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (!response.ok) {
+          if (response.status === 403 || response.status === 404) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("role");
+            navigate("/login");
+            return;
+          }
+          throw new Error("Failed to fetch charity data");
+        }
+        const data = await response.json();
+        setCharity(data);
+        setDonors([...new Set(data.donors.map((d) => d.name))]);
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    fetchCharityData();
   }, [navigate]);
 
   const handleChange = (e) => {
@@ -39,38 +64,89 @@ const CreateStory = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleFileChange = (e) => {
+    setImageFile(e.target.files[0]);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const { title, description, image, donor, beneficiary, inventory } =
-      formData;
+    setError("");
+
+    const { title, description, donor, beneficiary, inventory } = formData;
     if (
       !title ||
       !description ||
-      !image ||
+      !imageFile ||
       !donor ||
       !beneficiary ||
       !inventory
     ) {
-      alert("Please fill in all fields");
+      setError("Please fill in all fields");
       return;
     }
 
-    const charities = JSON.parse(localStorage.getItem("charities") || "[]");
-    const charityIndex = charities.findIndex(
-      (c) => c.email === localStorage.getItem("loggedInCharityEmail")
-    );
-    charities[charityIndex].stories.push({
-      title,
-      description,
-      image,
-      donor,
-      beneficiary,
-      inventory,
-    });
-    localStorage.setItem("charities", JSON.stringify(charities));
+    const formDataToSend = new FormData();
+    formDataToSend.append("title", title);
+    formDataToSend.append("description", description);
+    formDataToSend.append("image", imageFile);
+    formDataToSend.append("donor", donor);
+    formDataToSend.append("beneficiary", beneficiary);
+    formDataToSend.append("inventory", inventory);
 
-    navigate("/charity-dashboard/stories");
+    try {
+      const response = await fetch("http://localhost:5000/api/create-story", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formDataToSend,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create story");
+      }
+
+      navigate("/charity-dashboard/stories");
+    } catch (err) {
+      setError(err.message);
+    }
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    navigate("/login");
+  };
+
+  if (error) {
+    return (
+      <div
+        className="relative flex size-full min-h-screen flex-col bg-gray-50 group/design-root overflow-x-hidden"
+        style={{ fontFamily: 'Lexend, "Noto Sans", sans-serif' }}
+      >
+        <div className="layout-container flex h-full grow flex-col">
+          <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#eaeff1] px-10 py-3">
+            <h2 className="text-[#101618] text-lg font-bold leading-tight tracking-[-0.015em]">
+              Tuinue Wasichana
+            </h2>
+            <button
+              onClick={handleLogout}
+              className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#eaeff1] text-[#101618] text-sm font-bold leading-normal tracking-[0.015em]"
+            >
+              <span className="truncate">Log Out</span>
+            </button>
+          </header>
+          <div className="px-40 flex flex-1 justify-center py-5">
+            <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+              <p className="text-red-500 text-sm font-normal leading-normal px-4 py-3">
+                Error: {error}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!charity) return null;
 
@@ -85,7 +161,7 @@ const CreateStory = () => {
             Tuinue Wasichana
           </h2>
           <button
-            onClick={() => navigate("/login")}
+            onClick={handleLogout}
             className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#eaeff1] text-[#101618] text-sm font-bold leading-normal tracking-[0.015em]"
           >
             <span className="truncate">Log Out</span>
@@ -129,13 +205,12 @@ const CreateStory = () => {
             <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
               <label className="flex flex-col min-w-40 flex-1">
                 <p className="text-[#101618] text-base font-medium leading-normal pb-2">
-                  Image URL
+                  Image
                 </p>
                 <input
-                  name="image"
-                  placeholder="Enter image URL"
-                  value={formData.image}
-                  onChange={handleChange}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
                   className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#101618] focus:outline-0 focus:ring-0 border border-[#d4dfe2] bg-gray-50 focus:border-[#d4dfe2] h-14 placeholder:text-[#5c7e8a] p-[15px] text-base font-normal leading-normal"
                 />
               </label>
@@ -188,6 +263,13 @@ const CreateStory = () => {
                 />
               </label>
             </div>
+            {error && (
+              <div className="px-4 py-3">
+                <p className="text-red-500 text-sm font-normal leading-normal">
+                  {error}
+                </p>
+              </div>
+            )}
             <div className="flex px-4 py-3 justify-end">
               <button
                 onClick={handleSubmit}

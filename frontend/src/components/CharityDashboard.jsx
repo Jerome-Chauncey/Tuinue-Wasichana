@@ -5,52 +5,114 @@ import "../css/CharityDashboard.css";
 const CharityDashboard = () => {
   const navigate = useNavigate();
   const [charity, setCharity] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const storedCharities = JSON.parse(
-      localStorage.getItem("charities") || "[]"
-    );
-    const validCredentials = JSON.parse(
-      localStorage.getItem("validCredentials") || "{}"
-    );
-    const loggedInCharityEmail = localStorage.getItem("loggedInCharityEmail");
-    const loggedInCharity = storedCharities.find(
-      (c) => c.email === loggedInCharityEmail && c.status === "approved"
-    );
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
 
-    if (
-      !loggedInCharity ||
-      !validCredentials.Charity?.some((c) => c.email === loggedInCharityEmail)
-    ) {
+    // Check if user is logged in as a charity
+    if (!token || role !== "charity") {
       navigate("/login");
       return;
     }
-    setCharity(loggedInCharity);
+
+    // Fetch charity data from backend
+    const fetchCharityData = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:5003/api/charity-dashboard",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (!response.ok) {
+          if (response.status === 403 || response.status === 404) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("role");
+            navigate("/login");
+            return;
+          }
+          throw new Error("Failed to fetch charity dashboard");
+        }
+        const data = await response.json();
+        setCharity(data);
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    fetchCharityData();
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem("loggedInCharityEmail");
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
     navigate("/login");
   };
 
   const handleCreateStory = () => {
-    alert("Create Story functionality to be implemented");
+    navigate("/create-story");
   };
+
+  if (error) {
+    return (
+      <div
+        className="relative flex size-full min-h-screen flex-col bg-gray-50 group/design-root overflow-x-hidden"
+        style={{ fontFamily: 'Lexend, "Noto Sans", sans-serif' }}
+      >
+        <div className="layout-container flex h-full grow flex-col">
+          <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#eaeff1] px-10 py-3">
+            <div className="flex items-center gap-4 text-[#101618]">
+              <h2 className="text-[#101618] text-lg font-bold leading-tight tracking-[-0.015em]">
+                Tuinue Wasichana
+              </h2>
+            </div>
+          </header>
+          <div className="px-6 flex flex-1 justify-center py-5">
+            <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
+              <p className="text-red-500">Error: {error}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!charity) return null;
 
-  const totalDonations = charity.oneTimeDonations.reduce(
+  // Calculate donation metrics
+  const oneTimeDonations = charity.donors
+    .filter((d) => d.donationType === "one-time")
+    .map((d, index) => ({
+      donor: d.name,
+      email: d.email,
+      amount: d.amount || "$0", // Fallback if amount not provided
+      date: d.date || "N/A", // Fallback if date not provided
+    }));
+  const recurringDonations = charity.donors
+    .filter((d) => d.donationType === "recurring")
+    .map((d, index) => ({
+      donor: d.name,
+      email: d.email,
+      amount: d.amount || "$0", // Fallback if amount not provided
+      startDate: d.start_date || "N/A",
+      billingDate: d.billing_date || "N/A",
+    }));
+  const totalDonations = oneTimeDonations.reduce(
     (sum, d) => sum + parseFloat(d.amount.replace("$", "")),
     0
   );
-  const recurringDonations = charity.recurringDonations.reduce(
+  const recurringDonationsTotal = recurringDonations.reduce(
     (sum, d) => sum + parseFloat(d.amount.replace("$", "")),
     0
   );
-  const uniqueDonors = new Set([
-    ...charity.oneTimeDonations.map((d) => d.email),
-    ...charity.recurringDonations.map((d) => d.email),
-  ]).size;
+  const uniqueDonors = new Set(charity.donors.map((d) => d.email || d.name))
+    .size;
 
   return (
     <div
@@ -231,7 +293,7 @@ const CharityDashboard = () => {
                         Recurring Donations (monthly)
                       </p>
                       <p className="text-[#101618] tracking-tight text-2xl font-bold leading-tight">
-                        ${recurringDonations.toLocaleString()}
+                        ${recurringDonationsTotal.toLocaleString()}
                       </p>
                     </div>
                     <div className="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-6 bg-[#eaeff1]">
@@ -266,7 +328,7 @@ const CharityDashboard = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {charity.oneTimeDonations.map((donation, index) => (
+                          {oneTimeDonations.map((donation, index) => (
                             <tr
                               key={index}
                               className="border-t border-t-[#d4dfe2]"
@@ -275,9 +337,7 @@ const CharityDashboard = () => {
                                 {donation.donor}
                               </td>
                               <td className="table-Dashboard-One-Time-Donations-column-240 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.donor === "Anonymous"
-                                  ? ""
-                                  : donation.email}
+                                {donation.email || ""}
                               </td>
                               <td className="table-Dashboard-One-Time-Donations-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
                                 {donation.amount}
@@ -317,7 +377,7 @@ const CharityDashboard = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {charity.recurringDonations.map((donation, index) => (
+                          {recurringDonations.map((donation, index) => (
                             <tr
                               key={index}
                               className="border-t border-t-[#d4dfe2]"
@@ -326,9 +386,7 @@ const CharityDashboard = () => {
                                 {donation.donor}
                               </td>
                               <td className="table-Dashboard-Recurring-Donations-column-240 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.donor === "Anonymous"
-                                  ? ""
-                                  : donation.email}
+                                {donation.email || ""}
                               </td>
                               <td className="table-Dashboard-Recurring-Donations-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
                                 {donation.amount}
@@ -371,18 +429,16 @@ const CharityDashboard = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {charity.beneficiaries.map((beneficiary, index) => (
+                          {charity.stories.map((story, index) => (
                             <tr
                               key={index}
                               className="border-t border-t-[#d4dfe2]"
                             >
                               <td className="table-Beneficiaries-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
-                                {beneficiary.name}
+                                {story.beneficiary}
                               </td>
                               <td className="table-Beneficiaries-column-240 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {beneficiary.donor === "Anonymous"
-                                  ? "Anonymous"
-                                  : beneficiary.donor}
+                                {story.donor}
                               </td>
                             </tr>
                           ))}
@@ -419,21 +475,19 @@ const CharityDashboard = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {charity.inventorySent.map((item, index) => (
+                          {charity.stories.map((story, index) => (
                             <tr
                               key={index}
                               className="border-t border-t-[#d4dfe2]"
                             >
                               <td className="table-Inventory-Sent-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
-                                {item.item}
+                                {story.inventory}
                               </td>
                               <td className="table-Inventory-Sent-column-240 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {item.beneficiary}
+                                {story.beneficiary}
                               </td>
                               <td className="table-Inventory-Sent-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {item.donor === "Anonymous"
-                                  ? "Anonymous"
-                                  : item.donor}
+                                {story.donor}
                               </td>
                             </tr>
                           ))}
@@ -472,7 +526,11 @@ const CharityDashboard = () => {
                         </div>
                         <div
                           className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex-1"
-                          style={{ backgroundImage: `url("${story.image}")` }}
+                          style={{
+                            backgroundImage: `url("${
+                              story.image || "https://via.placeholder.com/300"
+                            }")`,
+                          }}
                         ></div>
                       </div>
                       <div className="p-4 grid grid-cols-[20%_1fr] gap-x-6">
@@ -481,9 +539,7 @@ const CharityDashboard = () => {
                             Donor
                           </p>
                           <p className="text-[#101618] text-sm font-normal leading-normal">
-                            {story.donor === "Anonymous"
-                              ? "Anonymous"
-                              : story.donor}
+                            {story.donor}
                           </p>
                         </div>
                         <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
