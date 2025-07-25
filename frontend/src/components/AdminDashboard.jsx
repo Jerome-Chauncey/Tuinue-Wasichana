@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/AdminDashboard.css";
+import { API_BASE_URL } from '../config';
 
 const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState("Existing Charities");

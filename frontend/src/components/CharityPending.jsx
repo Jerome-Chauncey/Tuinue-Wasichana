@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/Login.css";
+import { API_BASE_URL } from '../config';
+
 
 const CharityPending = () => {
   const navigate = useNavigate();

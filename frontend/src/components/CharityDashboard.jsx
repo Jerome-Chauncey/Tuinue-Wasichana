@@ -7,6 +7,8 @@ import {
   useLocation,
 } from "react-router-dom";
 import "../css/CharityDashboard.css";
+import { API_BASE_URL } from '../config';
+
 
 const CharityDashboard = () => {
   console.log("CharityDashboard.jsx loaded");
