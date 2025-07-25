@@ -21,7 +21,7 @@ const Login = () => {
       const checkCharityStatus = async () => {
         try {
           const response = await fetch(
-            "http://localhost:5000/api/charity-status",
+            `${API_BASE_URL}/api/charity-status`,
             {
               method: "GET",
               headers: {
@@ -59,7 +59,7 @@ const Login = () => {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/login", {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

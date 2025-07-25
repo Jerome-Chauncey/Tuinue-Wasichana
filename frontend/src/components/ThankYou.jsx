@@ -21,7 +21,7 @@ const ThankYou = () => {
     const fetchLastDonation = async () => {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/last-donation",
+          `${API_BASE_URL}/api/last-donation`,
           {
             method: "GET",
             headers: {

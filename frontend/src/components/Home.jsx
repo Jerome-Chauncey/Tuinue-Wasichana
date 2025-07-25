@@ -22,7 +22,7 @@ const Home = () => {
     // Fetch up to 3 approved charities
     const fetchCharities = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/charities", {
+        const response = await fetch(`${API_BASE_URL}/api/charities`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

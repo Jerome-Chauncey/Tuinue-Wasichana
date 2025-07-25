@@ -23,7 +23,7 @@ const AdminDashboard = () => {
     const fetchCharities = async () => {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/admin/charities",
+          `${API_BASE_URL}/api/admin/charities`,
           {
             method: "GET",
             headers: {
@@ -59,7 +59,7 @@ const AdminDashboard = () => {
     const token = localStorage.getItem("token");
     try {
       const response = await fetch(
-        "http://localhost:5000/api/admin/charities",
+        `${API_BASE_URL}/api/admin/charities`,
         {
           method: "PUT",
           headers: {
@@ -86,7 +86,7 @@ const AdminDashboard = () => {
     const token = localStorage.getItem("token");
     try {
       const response = await fetch(
-        "http://localhost:5000/api/admin/charities",
+        `${API_BASE_URL}/api/admin/charities`,
         {
           method: "PUT",
           headers: {
@@ -115,7 +115,7 @@ const AdminDashboard = () => {
     const token = localStorage.getItem("token");
     try {
       const response = await fetch(
-        "http://localhost:5000/api/admin/charities",
+        `${API_BASE_URL}/api/admin/charities`,
         {
           method: "PUT",
           headers: {

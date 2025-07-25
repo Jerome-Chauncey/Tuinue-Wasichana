@@ -28,7 +28,7 @@ const CreateStory = () => {
     const fetchData = async () => {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/charity-dashboard",
+          `${API_BASE_URL}/api/charity-dashboard`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -74,7 +74,7 @@ const CreateStory = () => {
     if (image) form.append("image", image);
 
     try {
-      const response = await fetch("http://localhost:5000/api/create-story", {
+      const response = await fetch(`${API_BASE_URL}/api/create-story`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

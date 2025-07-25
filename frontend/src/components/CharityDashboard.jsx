@@ -30,7 +30,7 @@ const CharityDashboard = () => {
       try {
         console.log("Fetching charity dashboard data");
         const response = await fetch(
-          "http://localhost:5000/api/charity-dashboard",
+          `${API_BASE_URL}/api/charity-dashboard`,
           {
             method: "GET",
             headers: {

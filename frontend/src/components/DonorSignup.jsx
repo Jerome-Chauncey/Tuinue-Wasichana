@@ -29,7 +29,7 @@ const DonorSignup = () => {
     // Fetch approved charities
     const fetchCharities = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/charities", {
+        const response = await fetch(`${API_BASE_URL}/api/charities`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -72,7 +72,7 @@ const DonorSignup = () => {
     try {
       // Register donor
       const signupResponse = await fetch(
-        "http://localhost:5000/api/donor-signup",
+        `${API_BASE_URL}/api/donor-signup`,
         {
           method: "POST",
           headers: {
@@ -91,7 +91,7 @@ const DonorSignup = () => {
       }
 
       // Log in donor to get token
-      const loginResponse = await fetch("http://localhost:5000/api/login", {
+      const loginResponse = await fetch(`${API_BASE_URL}/api/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -109,14 +109,14 @@ const DonorSignup = () => {
       localStorage.setItem("role", "donor");
 
       // Submit donation
-      const donationResponse = await fetch("http://localhost:5000/api/donations", {  // Changed from /api/donate
+      const donationResponse = await fetch(`${API_BASE_URL}/api/donations`, { 
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          charity_id: charityId,  // You'll need to get this from your form
+          charity_id: charityId,  
           amount: parseFloat(amount),
           frequency,
           anonymous,

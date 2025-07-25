@@ -38,7 +38,7 @@ const CharitySignUp = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/charity-signup", {
+      const response = await fetch(`${API_BASE_URL}/api/charity-signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

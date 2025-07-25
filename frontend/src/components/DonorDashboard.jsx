@@ -12,7 +12,7 @@ useEffect(() => {
     const token = localStorage.getItem("token"); // Get token from storage
     
     try {
-      const response = await fetch("http://localhost:5000/api/donor-dashboard", {
+      const response = await fetch(`${API_BASE_URL}/api/donor-dashboard`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
