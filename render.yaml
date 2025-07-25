@@ -18,28 +18,38 @@ services:
       pip install python-dotenv gunicorn
       pip install -r requirements.txt
       
+      # Initialize database (skip if already exists)
       export FLASK_APP=backend.config
-      flask db init || true  # Continue if migrations already exist
-      flask db migrate -m "initial migration" || true  # Skip if no changes
+      [ ! -d "migrations" ] && flask db init || true
+      
+      # Generate and run migrations (skip if no changes)
+      flask db migrate -m "initial migration" || true
       flask db upgrade
       
-      # Create tables (as backup if migrations fail)
+      # Create tables if migrations fail (safety net)
       PYTHONPATH=/opt/render/project/src python -c "
       from backend.config import create_app
       app = create_app()
       with app.app_context():
           from backend.models import db
-          db.create_all()
+          try:
+              db.create_all()
+          except Exception as e:
+              print(f'Database tables already exist: {str(e)}')
       "
       
+      # Conditional seeding
       PYTHONPATH=/opt/render/project/src python -c "
       from backend.config import create_app
+      from backend.models import Donation
       app = create_app()
       with app.app_context():
-          from backend.models import Donation
-          if Donation.query.count() == 0:  # Only seed if empty
+          if Donation.query.count() == 0:
               from backend.seed import seed_database
               seed_database()
+              print('Database seeded successfully')
+          else:
+              print('Database already contains data - skipping seeding')
       "
 
     startCommand: |
