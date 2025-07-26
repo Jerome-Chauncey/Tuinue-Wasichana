@@ -8,6 +8,7 @@ from .donor import Donor
 from .inventory import Inventory
 from .story import Story
 from .donor_charity import donors_charities
+from .paypal_donation import PaypalDonation
 
 __all__ = [
     'db',
@@ -19,4 +20,5 @@ __all__ = [
     'Inventory',
     'Story',
     'donors_charities'
+    'PaypalDonation'
 ]

@@ -16,10 +16,12 @@ class Donor(db.Model):
 
     donations = db.relationship('Donation', back_populates='donor')
     charities = db.relationship(
+    
         'Charity',
         secondary=donors_charities,  
         back_populates='donors'
     )
+    paypal_donations = db.relationship('PaypalDonation', back_populates='donor')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
