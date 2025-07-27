@@ -16,7 +16,7 @@ This platform enables donors to support such charities through one-time and recu
 
 * **Donor**
 * **Charity**
-* **Administrator**
+* **Admin**
 
 ## User Stories
 
