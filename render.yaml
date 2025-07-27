@@ -17,44 +17,43 @@ services:
       pip install --upgrade pip
       pip install python-dotenv gunicorn
       pip install -r requirements.txt
-      
-      export FLASK_APP=backend.config
-      [ ! -d "migrations" ] && flask db init || true
-      
-      # Remove migrate command from here:
-      # flask db migrate -m "initial migration" || true
-      
-      # Only create tables if migrations don't exist (safety net)
-      PYTHONPATH=/opt/render/project/src python -c "
-      from backend.config import create_app
-      app = create_app()
-      with app.app_context():
-          from backend.models import db
-          try:
-              db.create_all()
-          except Exception as e:
-              print(f'Database tables already exist: {str(e)}')
-      "
-      
-      # Conditional seeding
-      PYTHONPATH=/opt/render/project/src python -c "
-      from backend.config import create_app
-      from backend.models import Donation
-      app = create_app()
-      with app.app_context():
-          if Donation.query.count() == 0:
-              from backend.seed import seed_database
-              seed_database()
-              print('Database seeded successfully')
-          else:
-              print('Database already contains data - skipping seeding')
-      "
 
-    startCommand: |
-      # Run migrations every time app starts
-      flask db upgrade
-      # Then start the server
-      gunicorn --bind 0.0.0.0:$PORT 'backend.config:create_app()'
+      export FLASK_APP=backend/config.py
+
+      # Initialize migrations folder if missing
+      if [ ! -d "migrations" ]; then
+        flask db init
+      fi
+
+      # Generate and apply migrations
+      flask db migrate -m "Auto migration" || echo "No changes detected"
+      flask db upgrade || echo "Upgrade failed, trying db.create_all()"
+
+      # Fallback: Create tables manually if migration fails
+      PYTHONPATH=/opt/render/project/src python -c "
+from backend.config import create_app
+app = create_app()
+with app.app_context():
+    from backend.models import db
+    db.create_all()
+"
+
+      # Seed database if empty
+      PYTHONPATH=/opt/render/project/src python -c "
+from backend.config import create_app
+app = create_app()
+with app.app_context():
+    from backend.models import Donation
+    if Donation.query.count() == 0:
+        from backend.seed import seed_database
+        seed_database()
+        print('Database seeded')
+    else:
+        print('Database already has donations')
+"
+
+    startCommand: gunicorn --bind 0.0.0.0:$PORT backend.config:app
+
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -66,5 +65,24 @@ services:
         value: 392832fc3fe988535d689bcdb93c49581983f7d2ae0881238a269ceb4d18fe84
       - key: FLASK_ENV
         value: production
+      - key: FLASK_APP
+        value: backend/config.py
       - key: UPLOAD_FOLDER
         value: ./uploads
+
+  - type: web
+    name: Tuinue-Wasichana-UI
+    env: node
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: frontend
+    buildCommand: |
+      echo "20" > .nvmrc
+      npm install
+      npm run build
+    startCommand: |
+      npm run preview -- --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://tuinue-wasichana-api.onrender.com
