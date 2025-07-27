@@ -220,7 +220,6 @@ def donor_dashboard():
         if not donor:
             return jsonify({"error": "Donor not found"}), 404
 
-        # NUCLEAR OPTION: Direct SQL query with absolute certainty
         sql = """
         SELECT 
             d.id,
@@ -233,13 +232,12 @@ def donor_dashboard():
             c.mission as charity_mission
         FROM donations d
         JOIN charities c ON d.charity_id = c.id
-        WHERE d.donor_id = %s
+        WHERE d.donor_id = :donor_id
         ORDER BY donation_date DESC
         """
         
-        # Execute raw SQL
         with db.engine.connect() as connection:
-            result = connection.execute(text(sql), (donor.id,))
+            result = connection.execute(text(sql), {"donor_id": donor.id})
             donations = [dict(row) for row in result]
 
         if not donations:
@@ -258,9 +256,11 @@ def donor_dashboard():
         total_donated = 0
 
         for donation in donations:
-            # This CANNOT fail as we control the SQL output
             donation_date = donation['donation_date']
-            
+            # Handle if donation_date is a string - convert to datetime
+            if donation_date and isinstance(donation_date, str):
+                donation_date = datetime.fromisoformat(donation_date)
+
             donations_data.append({
                 "id": donation['id'],
                 "amount": float(donation['amount']),
@@ -288,7 +288,7 @@ def donor_dashboard():
         current_app.logger.error(f"CRITICAL Donor dashboard error: {str(e)}\n{traceback.format_exc()}")
         return jsonify({
             "error": "Internal server error",
-            "details": "Please contact support"  # Don't expose details in production
+            "details": "Please contact support"
         }), 500
 
 
