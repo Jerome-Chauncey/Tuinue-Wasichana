@@ -18,15 +18,13 @@ services:
       pip install python-dotenv gunicorn
       pip install -r requirements.txt
       
-      # Initialize database (skip if already exists)
       export FLASK_APP=backend.config
       [ ! -d "migrations" ] && flask db init || true
       
-      # Generate and run migrations (skip if no changes)
-      flask db migrate -m "initial migration" || true
-      flask db upgrade
+      # Remove migrate command from here:
+      # flask db migrate -m "initial migration" || true
       
-      # Create tables if migrations fail (safety net)
+      # Only create tables if migrations don't exist (safety net)
       PYTHONPATH=/opt/render/project/src python -c "
       from backend.config import create_app
       app = create_app()
@@ -53,6 +51,9 @@ services:
       "
 
     startCommand: |
+      # Run migrations every time app starts
+      flask db upgrade
+      # Then start the server
       gunicorn --bind 0.0.0.0:$PORT 'backend.config:create_app()'
     envVars:
       - key: DATABASE_URL
@@ -67,20 +68,3 @@ services:
         value: production
       - key: UPLOAD_FOLDER
         value: ./uploads
-
-  - type: web
-    name: Tuinue-Wasichana-UI
-    env: node
-    region: oregon
-    plan: free
-    branch: main
-    rootDir: frontend
-    buildCommand: |
-      echo "20" > .nvmrc
-      npm install
-      npm run build
-    startCommand: |
-      npm run preview -- --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: VITE_API_BASE_URL
-        value: https://tuinue-wasichana-api.onrender.com
