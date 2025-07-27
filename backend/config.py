@@ -17,12 +17,14 @@ api = Api()
 def create_app():
     app = Flask(__name__)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")  # Example: postgresql://user:pass@localhost/db
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")  
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY")
     app.config['SECRET_KEY'] = os.getenv("FLASK_SECRET_KEY")
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     app.config['CORS_SUPPORTS_CREDENTIALS'] = True
+    app.config['SQLALCHEMY_ECHO'] = True
+
 
     CORS(app,
         origins=["http://localhost:5173","https://tuinue-wasichana-ui-dw85.onrender.com" ],
@@ -35,13 +37,12 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+    
 
     from backend.routes.routes import init_routes
     init_routes(app)
 
-    with app.app_context():
-        from backend.models import charity, beneficiary, donor, admin, donation, inventory, story
-        db.create_all()
+
 
     return app
 

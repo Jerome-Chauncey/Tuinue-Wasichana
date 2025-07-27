@@ -19,6 +19,6 @@ __all__ = [
     'Donor',
     'Inventory',
     'Story',
-    'donors_charities'
+    'donors_charities',
     'PaypalDonation'
 ]

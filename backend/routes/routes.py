@@ -1,8 +1,9 @@
-from flask import Blueprint, jsonify, request
-from datetime import datetime, timedelta 
+from flask import Blueprint, jsonify, request, current_app
+import traceback
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 from flask_cors import cross_origin
 from backend.config import db
+from datetime import datetime
 from backend.models.donor import Donor
 from backend.models.donation import Donation
 from backend.models.charity import Charity
@@ -12,6 +13,7 @@ from backend.models.admin import Admin
 from backend.models.donor_charity import donors_charities
 import os
 from werkzeug.utils import secure_filename
+from sqlalchemy import text
 
 api = Blueprint('api', __name__)
 
@@ -207,104 +209,92 @@ def donor_signup():
 
 @api.route("/donor-dashboard", methods=["GET"])
 @jwt_required()
-@cross_origin()
 def donor_dashboard():
-    identity = get_jwt_identity()
-    if identity["role"] != "donor":
-        return jsonify({"error": "Unauthorized"}), 403
-    
-    donor = Donor.query.filter_by(email=identity["email"]).first()
-    if not donor:
-        return jsonify({"error": "Donor not found"}), 404
+    try:
+        identity = get_jwt_identity()
+        
+        if not identity or 'email' not in identity:
+            return jsonify({"error": "Invalid token"}), 401
 
-    # Properly indented query
-    donations = db.session.query(Donation, Charity.name)\
-        .join(Charity, Donation.charity_id == Charity.id)\
-        .filter(Donation.donor_id == donor.id)\
-        .all()
+        donor = Donor.query.filter_by(email=identity["email"]).first()
+        if not donor:
+            return jsonify({"error": "Donor not found"}), 404
 
-    # Properly indented query
-    charities = db.session.query(Charity)\
-        .join(donors_charities, Charity.id == donors_charities.c.charity_id)\
-        .filter(donors_charities.c.donor_id == donor.id)\
-        .all()
+        # NUCLEAR OPTION: Direct SQL query with absolute certainty
+        sql = """
+        SELECT 
+            d.id,
+            d.amount,
+            COALESCE(d.date, d.created_at) as donation_date,
+            d.frequency,
+            d.is_anonymous,
+            d.donor_name,
+            c.name as charity_name,
+            c.mission as charity_mission
+        FROM donations d
+        JOIN charities c ON d.charity_id = c.id
+        WHERE d.donor_id = %s
+        ORDER BY donation_date DESC
+        """
+        
+        # Execute raw SQL
+        with db.engine.connect() as connection:
+            result = connection.execute(text(sql), (donor.id,))
+            donations = [dict(row) for row in result]
 
-    # Properly indented query - using charity relationship instead of donor_id
-    stories = db.session.query(Story)\
-        .join(Charity, Story.charity_id == Charity.id)\
-        .filter(Charity.id.in_([c.id for c in donor.charities]))\
-        .all()
+        if not donations:
+            return jsonify({
+                "donor": {
+                    "name": donor.name,
+                    "email": donor.email
+                },
+                "donations": [],
+                "charities": [],
+                "total_donated": 0
+            })
 
-    return jsonify({
-        "name": donor.name,
-        "email": donor.email,
-        "donations": [{
-            "charity": charity_name,
-            "amount": donation.amount,
-            "date": donation.date.strftime('%Y-%m-%d') if donation.date else None,
-            "donationType": donation.frequency,
-            "start_date": donation.start_date.strftime('%Y-%m-%d') if donation.start_date else None,
-            "billing_date": donation.billing_date.strftime('%Y-%m-%d') if donation.billing_date else None
-        } for donation, charity_name in donations],
-        "charities": [{
-            "name": charity.name,
-            "mission": charity.mission
-        } for charity in charities],
-        "stories": [{
-            "title": story.title,
-            "description": story.description,
-            "charity": story.charity.name if story.charity else None,
-            "beneficiary": story.beneficiary.name if story.beneficiary else None,
-            "image": story.image,
-            "inventory": ", ".join([item.name for item in story.inventory_items]) if hasattr(story, 'inventory_items') else ""
-        } for story in stories]
-    }), 200
+        donations_data = []
+        charities = set()
+        total_donated = 0
 
-@api.route("/donate", methods=["POST"])
-@jwt_required()
-def create_donation():
-    identity = get_jwt_identity()
-    if identity["role"] != "donor":
-        return jsonify({"error": "Unauthorized"}), 403
+        for donation in donations:
+            # This CANNOT fail as we control the SQL output
+            donation_date = donation['donation_date']
+            
+            donations_data.append({
+                "id": donation['id'],
+                "amount": float(donation['amount']),
+                "charity": donation['charity_name'],
+                "mission": donation['charity_mission'],
+                "date": donation_date.strftime('%Y-%m-%d') if donation_date else None,
+                "frequency": donation['frequency'],
+                "is_anonymous": donation['is_anonymous'],
+                "donor_name": donation['donor_name']
+            })
+            charities.add((donation['charity_name'], donation['charity_mission']))
+            total_donated += float(donation['amount'])
 
-    data = request.get_json()
-    charity_id = data.get("charity_id")
-    amount = data.get("amount")
-    frequency = data.get("frequency", "one-time")
-    anonymous = data.get("anonymous", False)
+        return jsonify({
+            "donor": {
+                "name": donor.name,
+                "email": donor.email
+            },
+            "donations": donations_data,
+            "charities": [{"name": c[0], "mission": c[1]} for c in charities],
+            "total_donated": total_donated
+        })
 
-    if not all([charity_id, amount]):
-        return jsonify({"error": "Missing required fields"}), 400
+    except Exception as e:
+        current_app.logger.error(f"CRITICAL Donor dashboard error: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({
+            "error": "Internal server error",
+            "details": "Please contact support"  # Don't expose details in production
+        }), 500
 
-    donor = Donor.query.filter_by(email=identity["email"]).first()
-    charity = Charity.query.get(charity_id)
 
-    if not charity:
-        return jsonify({"error": "Charity not found"}), 404
 
-    new_donation = Donation(
-        donor_id=donor.id,
-        charity_id=charity.id,
-        amount=amount,
-        frequency=frequency,
-        is_anonymous=anonymous
-    )
-    
-    if frequency == "recurring":
-        new_donation.start_date = datetime.utcnow()
-        new_donation.billing_date = datetime.utcnow() + timedelta(days=30)
-    
-    db.session.add(new_donation)
-    db.session.commit()
 
-    return jsonify({
-        "message": "Donation successful",
-        "donation": {
-            "id": new_donation.id,
-            "amount": new_donation.amount,
-            "frequency": new_donation.frequency
-        }
-    }), 201
+
 
 @api.route("/admin/charities", methods=["GET", "PUT"])
 @jwt_required()

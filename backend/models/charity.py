@@ -23,6 +23,7 @@ class Charity(db.Model):
         secondary=donors_charities,  
         back_populates='charities'
     )
+    
 
     def set_password(self, password):
         self._password_hash = generate_password_hash(password)

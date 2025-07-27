@@ -1,12 +1,16 @@
-from .config import app, db
+from backend.config import app, db
+from flask_migrate import Migrate
 
-# Export models
-from .models import (
-    charity, 
-    beneficiary, 
-    donor, 
-    admin, 
-    donation, 
-    inventory, 
-    story
+from backend.models import (
+    Admin,
+    Beneficiary,
+    Charity,
+    Donation,
+    Donor,
+    Inventory,
+    Story,
+    donors_charities,
+    PaypalDonation,
 )
+
+migrate = Migrate(app, db)
