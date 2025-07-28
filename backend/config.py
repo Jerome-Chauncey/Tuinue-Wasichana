@@ -29,13 +29,15 @@ def create_app():
         'PROPAGATE_EXCEPTIONS': True
     })
 
+    # Configure CORS to handle all /api/* routes
     CORS(app,
          resources={
              r"/api/*": {
                  "origins": ["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"],
                  "supports_credentials": True,
                  "methods": ["GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
-                 "allow_headers": ["Content-Type", "Authorization"]
+                 "allow_headers": ["Content-Type", "Authorization"],
+                 "expose_headers": ["Content-Type", "Authorization"]
              }
          }
     )
@@ -49,22 +51,10 @@ def create_app():
     init_routes(app)
     app.logger.info("API Blueprint registered via init_routes")
 
-    @app.before_request
-    def handle_options():
-        if request.method == "OPTIONS":
-            response = app.make_default_options_response()
-            response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
-            response.headers['Access-Control-Max-Age'] = 600
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            return response
-
+   
     @app.errorhandler(404)
     def not_found(error):
         response = jsonify({"error": "Not found"})
-        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
         return response, 404
 
     return app
