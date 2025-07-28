@@ -200,13 +200,12 @@ def donor_signup():
 
     return jsonify({"message": "Donor registered successfully"}), 201
 
-@api.route("/donor-dashboard", methods=["GET"])
+@api.route('/api/donor-dashboard', methods=['GET'])
 @jwt_required()
 @cross_origin()
-def donor_dashboard():
+def donor_dashboard_api():
     try:
         identity = get_jwt_identity()
-        
         if not identity or 'email' not in identity:
             return jsonify({"error": "Invalid token"}), 401
 
@@ -236,10 +235,7 @@ def donor_dashboard():
 
         if not donations:
             return jsonify({
-                "donor": {
-                    "name": donor.name,
-                    "email": donor.email
-                },
+                "donor": {"name": donor.name, "email": donor.email},
                 "donations": [],
                 "charities": [],
                 "total_donated": 0
@@ -268,10 +264,7 @@ def donor_dashboard():
             total_donated += float(donation['amount'])
 
         return jsonify({
-            "donor": {
-                "name": donor.name,
-                "email": donor.email
-            },
+            "donor": {"name": donor.name, "email": donor.email},
             "donations": donations_data,
             "charities": [{"name": c[0], "mission": c[1]} for c in charities],
             "total_donated": total_donated
@@ -279,10 +272,7 @@ def donor_dashboard():
 
     except Exception as e:
         current_app.logger.error(f"CRITICAL Donor dashboard error: {str(e)}\n{traceback.format_exc()}")
-        return jsonify({
-            "error": "Internal server error",
-            "details": "Please contact support"
-        }), 500
+        return jsonify({"error": "Internal server error"}), 500
 
 @api.route('/api/donate', methods=['POST', 'OPTIONS'])
 @cross_origin()

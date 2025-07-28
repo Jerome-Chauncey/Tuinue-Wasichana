@@ -9,42 +9,24 @@ const DonorDashboard = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchDonorData = async () => {
-      const token = localStorage.getItem("token");
-      
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/donor-dashboard`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          credentials: "include" // Ensure cookies are sent if needed
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem("token");
-            localStorage.removeItem("role");
-            navigate("/login");
-            return;
-          }
-          throw new Error(`Failed to fetch donor data: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log("Donor data:", data); // Debug response
-        setDonor(data);
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError(err.message);
-      }
-    };
+  const fetchDonorData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://tuinue-wasichana-api-jauh.onrender.com/donor-dashboard', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Required for cookies or Authorization
+      });
+      if (!response.ok) throw new Error('Failed to fetch');
+      const data = await response.json();
+      setDonorData(data);
+    } catch (error) {
+      console.error('Fetch error:', error);
+    }
+  };
 
     fetchDonorData();
   }, [navigate]);
