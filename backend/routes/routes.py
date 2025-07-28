@@ -258,8 +258,7 @@ def donor_dashboard():
         charities = [{
             'id': c.id,
             'name': c.name,
-            'mission': c.mission,
-            'logo_url': c.logo_url
+            'mission': c.mission
         } for c in donor.charities]
 
         stories = []
