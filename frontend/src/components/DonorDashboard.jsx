@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Route, Routes, Link, useNavigate } from "react-router-dom";
 import "../css/DonorDashboard.css";
-import { API_BASE_URL } from '../config';
+import { fetchWithAuth } from '../api/client';
 
 const DonorDashboard = () => {
   const navigate = useNavigate();
@@ -12,53 +12,22 @@ const DonorDashboard = () => {
   useEffect(() => {
     const fetchDonorData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-
-        const response = await fetch('https://tuinue-wasichana-api-jauh.onrender.com/api/donor-dashboard', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-          }
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await fetchWithAuth('/donor-dashboard');
         setDonor(data);
       } catch (error) {
         console.error('Fetch error:', error);
         setError(error.message);
+        if (error.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDonorData();
-  }, [navigate]);  // Added navigate as dependency
-
-  if (isLoading) {
-    return <div className="loading-spinner">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="error-message">Error: {error}</div>;
-  }
-
-  if (!donor) {
-    return <div>No donor data available</div>;
-  }
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -437,7 +406,7 @@ const DonorDashboard = () => {
                             <th className="table-Donor-One-Time-Donations-column-360 px-4 py-3 text-left text-[#101618] w-[400px] text-sm font-medium leading-normal">
                               Amount
                             </th>
-                            <th className="table-Donor-One-Time-Donations-column-64px px-auto4 py-3 text-right text-[#101618]" w-auto text-sm="text-sm font-medium" leading-normal="leading-normal">
+                            <th className="table-Donor-One-Time-Donations-column-64px px-4 py-3 text-left text-[#101618] w-[400px] text-sm font-medium leading-normal">
                               Date
                             </th>
                           </tr>
@@ -452,7 +421,7 @@ const DonorDashboard = () => {
                                 <td className="table-Donor-One-Time-Donations-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
                                   {donation.charity}
                                 </td>
-                                <td className="table-Donation-One-Time-Donations-column-364 px-12 py-3 h-[72px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                <td className="table-Donor-One-Time-Donations-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
                                   {donation.amount}
                                 </td>
                                 <td className="table-Donor-One-Time-Donations-column-48 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">

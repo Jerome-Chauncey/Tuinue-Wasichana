@@ -17,9 +17,11 @@ from sqlalchemy import text
 
 api = Blueprint('api', __name__)
 
-@api.route("/login", methods=["POST"])
-@cross_origin()
+@api.route("/login", methods=["POST", "OPTIONS"])
+@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
 def login():
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
     data = request.get_json()
     email = data.get("email")
     password = data.get("password")
@@ -48,10 +50,12 @@ def login():
     access_token = create_access_token(identity={"email": email, "role": role})
     return jsonify({"token": access_token, "role": role, "charityStatus": user.status if role == "charity" else None}), 200
 
-@api.route("/charity/status", methods=["GET"])
+@api.route("/charity/status", methods=["GET", "OPTIONS"])
 @jwt_required()
-@cross_origin()
+@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
 def charity_status():
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
     identity = get_jwt_identity()
     if identity["role"] != "charity":
         return jsonify({"error": "Unauthorized"}), 403
@@ -61,11 +65,10 @@ def charity_status():
     return jsonify({"status": charity.status}), 200
 
 @api.route("/charity-signup", methods=["POST", "OPTIONS"])
-@cross_origin()
+@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
 def charity_signup():
     if request.method == "OPTIONS":
         return jsonify({}), 200
-        
     data = request.get_json()
     name = data.get("name")
     email = data.get("email")
@@ -92,10 +95,12 @@ def charity_signup():
 
     return jsonify({"message": "Application submitted successfully"}), 201
 
-@api.route("/charity/dashboard", methods=["GET"])
+@api.route("/charity/dashboard", methods=["GET", "OPTIONS"])
 @jwt_required()
-@cross_origin()
+@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
 def charity_dashboard():
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
     identity = get_jwt_identity()
     if identity["role"] != "charity":
         return jsonify({"error": "Unauthorized"}), 403
@@ -132,10 +137,12 @@ def charity_dashboard():
         } for story in stories]
     }), 200
 
-@api.route("/charities", methods=["GET", "POST"])
-@cross_origin()
+@api.route("/charities", methods=["GET", "POST", "OPTIONS"])
+@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
 def charities():
-    current_app.logger.info("Accessing /api/charities endpoint")
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
+    current_app.logger.info("Accessing /charities endpoint")
     if request.method == "GET":
         charities = Charity.query.all()
         current_app.logger.info(f"Found {len(charities)} charities")
@@ -172,11 +179,10 @@ def charities():
         return jsonify({"message": "Charity created successfully"}), 201
 
 @api.route("/donor-signup", methods=["POST", "OPTIONS"])
-@cross_origin()
+@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
 def donor_signup():
     if request.method == "OPTIONS":
         return jsonify({}), 200
-
     data = request.get_json()
     name = data.get("name")
     email = data.get("email")
@@ -200,12 +206,12 @@ def donor_signup():
 
     return jsonify({"message": "Donor registered successfully"}), 201
 
-@api.route('/api/donor-dashboard', methods=['GET', 'OPTIONS'])
+@api.route("/donor-dashboard", methods=["GET", "OPTIONS"])
 @jwt_required()
-@cross_origin()
+@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
 def donor_dashboard():
-    if request.method == 'OPTIONS':
-        return '', 200
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
     try:
         identity = get_jwt_identity()
         if not identity or 'email' not in identity:
@@ -276,11 +282,12 @@ def donor_dashboard():
         current_app.logger.error(f"CRITICAL Donor dashboard error: {str(e)}\n{traceback.format_exc()}")
         return jsonify({"error": "Internal server error"}), 500
 
-@api.route('/api/donate', methods=['POST', 'OPTIONS'])
-@cross_origin()
+@api.route("/donate", methods=["POST", "OPTIONS"])
+@jwt_required()
+@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
 def donate():
-    if request.method == 'OPTIONS':
-        return '', 200  # Return empty body with 200 OK to satisfy preflight
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
     try:
         current_user = get_jwt_identity()
         if not current_user or current_user.get('role') != 'donor':
@@ -343,10 +350,12 @@ def donate():
         current_app.logger.error(f"CRITICAL Donation error: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'error': 'Internal server error'}), 500
 
-@api.route("/admin/charities", methods=["GET", "PUT"])
+@api.route("/admin/charities", methods=["GET", "PUT", "OPTIONS"])
 @jwt_required()
-@cross_origin()
+@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
 def admin_charities():
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
     identity = get_jwt_identity()
     if identity["role"] != "admin":
         return jsonify({"error": "Unauthorized"}), 403
@@ -376,10 +385,12 @@ def admin_charities():
         db.session.commit()
         return jsonify({"message": f"Charity status updated to {status}"}), 200
 
-@api.route("/stories", methods=["POST"])
+@api.route("/stories", methods=["POST", "OPTIONS"])
 @jwt_required()
-@cross_origin()
+@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
 def create_story():
+    if request.method == "OPTIONS":
+        return jsonify({}), 200
     identity = get_jwt_identity()
     if identity["role"] != "charity":
         return jsonify({"error": "Unauthorized"}), 403

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/DonorSignup.css";
-import { API_BASE_URL } from '../config';
-
+import { fetchWithAuth } from '../api/client';
 
 const DonorSignup = () => {
   const navigate = useNavigate();
@@ -31,17 +30,7 @@ const DonorSignup = () => {
     // Fetch approved charities
     const fetchCharities = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/charities`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        });
-        if (!response.ok) {
-          throw new Error("Failed to fetch charities");
-        }
-        const data = await response.json();
+        const data = await fetchWithAuth('/charities');
         setCharities(data);
       } catch (err) {
         setError(err.message);
@@ -63,8 +52,7 @@ const DonorSignup = () => {
     e.preventDefault();
     setError("");
 
-    const { name, email, password, charity, amount, frequency, anonymous } =
-      formData;
+    const { name, email, password, charity, amount, frequency, anonymous } = formData;
 
     if (!name || !email || !password || !charity || !amount) {
       setError("Please fill in all fields");
@@ -72,66 +60,46 @@ const DonorSignup = () => {
     }
 
     try {
-      // Register donor
-      const signupResponse = await fetch(
-        `${API_BASE_URL}/api/donor-signup`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ name, email, password, anonymous }),
-        }
-      );
-
-      if (!signupResponse.ok) {
-        if (signupResponse.status === 409) {
-          throw new Error("Email already registered");
-        }
-        throw new Error("Failed to register donor");
+      // Find charity ID based on selected charity name
+      const selectedCharity = charities.find(c => c.name === charity);
+      if (!selectedCharity) {
+        throw new Error("Selected charity not found");
       }
+      const charityId = selectedCharity.id;
+
+      // Register donor
+      await fetchWithAuth('/donor-signup', {
+        method: "POST",
+        body: JSON.stringify({ name, email, password, anonymous }),
+      });
 
       // Log in donor to get token
-      const loginResponse = await fetch(`${API_BASE_URL}/api/login`, {
+      const { token } = await fetchWithAuth('/login', {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
         body: JSON.stringify({ email, password, role: "donor" }),
       });
 
-      if (!loginResponse.ok) {
-        throw new Error("Failed to log in after signup");
-      }
-
-      const { token } = await loginResponse.json();
       localStorage.setItem("token", token);
       localStorage.setItem("role", "donor");
 
       // Submit donation
-      const donationResponse = await fetch(`${API_BASE_URL}/api/donations`, { 
+      await fetchWithAuth('/donations', {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
-          charity_id: charityId,  
+          charity_id: charityId,
           amount: parseFloat(amount),
           frequency,
           anonymous,
         }),
       });
 
-      if (!donationResponse.ok) {
-        throw new Error("Failed to process donation");
-      }
-
       navigate("/thank-you");
     } catch (err) {
-      setError(err.message);
+      if (err.status === 409) {
+        setError("Email already registered");
+      } else {
+        setError(err.message || "Failed to process signup or donation");
+      }
     }
   };
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { API_BASE_URL } from '../config';
-
+import { fetchWithAuth } from '../api/client';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -24,16 +23,7 @@ const Home = () => {
     // Fetch up to 3 approved charities
     const fetchCharities = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/charities`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        if (!response.ok) {
-          throw new Error("Failed to fetch charities");
-        }
-        const data = await response.json();
+        const data = await fetchWithAuth('/charities');
         console.log("Fetched charities:", data); // Log data for debugging
         setCharities(data.slice(0, 3)); // Limit to 3 charities
       } catch (err) {

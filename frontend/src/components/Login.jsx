@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/Login.css";
-import { API_BASE_URL } from '../config';
-
+import { fetchWithAuth } from '../api/client';
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -19,38 +18,23 @@ const Login = () => {
     if (token && role === "donor") {
       navigate("/donor-dashboard");
     } else if (token && role === "charity") {
-      // Charity status check requires async call to /api/charity-status
       const checkCharityStatus = async () => {
         try {
-          const response = await fetch(
-            `${API_BASE_URL}/api/charity-status`,
-            {
-              method: "GET",
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-          if (response.ok) {
-            const { status } = await response.json();
-            if (status === "approved") {
-              navigate("/charity-approved");
-            } else if (status === "pending") {
-              navigate("/charity-pending");
-            } else if (status === "rejected") {
-              navigate("/charity-rejected");
-            }
+          const { status } = await fetchWithAuth('/charity-status');
+          if (status === "approved") {
+            navigate("/charity-approved");
+          } else if (status === "pending") {
+            navigate("/charity-pending");
+          } else if (status === "rejected") {
+            navigate("/charity-rejected");
           } else {
-            setError("Failed to verify charity status");
+            setError("Invalid charity status");
           }
         } catch (err) {
           setError("Error checking charity status");
         }
       };
-      if (role === "charity") {
-        checkCharityStatus();
-      }
+      checkCharityStatus();
     } else if (token && role === "admin") {
       navigate("/admin-dashboard");
     }
@@ -61,30 +45,14 @@ const Login = () => {
     setError("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/login`, {
+      const { token, role, charityStatus } = await fetchWithAuth('/login', {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           email,
           password,
           role: userType.toLowerCase(),
         }),
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error("Invalid email or password");
-        } else if (response.status === 403) {
-          const { error } = await response.json();
-          throw new Error(error);
-        } else {
-          throw new Error("Login failed");
-        }
-      }
-
-      const { token, role, charityStatus } = await response.json();
 
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
@@ -107,7 +75,13 @@ const Login = () => {
         setError("Invalid user role");
       }
     } catch (err) {
-      setError(err.message);
+      if (err.status === 401) {
+        setError("Invalid email or password");
+      } else if (err.status === 403) {
+        setError(err.message);
+      } else {
+        setError("Login failed");
+      }
     }
   };
 
