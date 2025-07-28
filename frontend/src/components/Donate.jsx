@@ -12,7 +12,7 @@ const Donate = () => {
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
-    // Fetch charities on component mount
+    
     useEffect(() => {
         const fetchCharities = async () => {
             try {

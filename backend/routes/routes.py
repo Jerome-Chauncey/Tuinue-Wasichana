@@ -293,13 +293,10 @@ def donor_dashboard():
     
 
 
-from flask import request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from your_models import Donation, Donor, Charity  # Replace with your actual models
-from your_database import db  # Replace with your db instance
+
 
 @api.route('/api/donate', methods=['POST', 'OPTIONS'])
-@jwt_required(optional=True)  # Allows OPTIONS without JWT
+@jwt_required(optional=True)  
 def donate():
     # Handle preflight request
     if request.method == 'OPTIONS':
@@ -310,17 +307,17 @@ def donate():
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response, 200
 
-    # Get current user from JWT
+    
     current_user = get_jwt_identity()
     if not current_user or current_user.get('role') != 'donor':
         return jsonify({'error': 'Unauthorized'}), 401
 
-    # Parse request data
+    
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No data provided'}), 400
 
-    # Validate required fields
+   
     required_fields = ['charity_id', 'amount']
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Missing required fields'}), 400
