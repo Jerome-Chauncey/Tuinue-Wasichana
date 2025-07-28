@@ -19,9 +19,9 @@ const Donate = () => {
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    withCredentials: true // Align with backend CORS credentials
+                    withCredentials: true
                 });
-                console.log('Charities response:', response.data); // Debug response
+                console.log('Charities response:', response.data);
                 setCharities(response.data.filter(c => c.status === 'Active'));
             } catch (error) {
                 console.error('Error fetching charities:', error);
@@ -45,7 +45,6 @@ const Donate = () => {
         setIsLoading(true);
         setMessage({ text: '', type: '' });
 
-        // Validate inputs
         if (!charityId) {
             setMessage({ text: 'Please select a charity', type: 'error' });
             setIsLoading(false);
@@ -68,7 +67,7 @@ const Donate = () => {
             const response = await axios.post(
                 `${import.meta.env.VITE_API_BASE_URL}/api/donate`,
                 {
-                    charity_id: parseInt(charityId), // Ensure charity_id is an integer
+                    charity_id: parseInt(charityId),
                     amount: parseFloat(amount),
                     frequency,
                     anonymous
@@ -87,11 +86,11 @@ const Donate = () => {
                 type: 'success'
             });
 
-            // Reset form
             setAmount('');
             setCharityId('');
             setFrequency('one-time');
             setAnonymous(false);
+            navigate('/donor-dashboard?refresh=true'); // Redirect with refresh param
 
         } catch (error) {
             console.error('Donation error:', error);

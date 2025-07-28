@@ -1,33 +1,46 @@
 import React, { useEffect, useState } from "react";
-import { Route, Routes, Link, useNavigate } from "react-router-dom";
+import { Route, Routes, Link, useNavigate, useLocation } from "react-router-dom";
 import "../css/DonorDashboard.css";
 import { fetchWithAuth } from '../api/client';
 
 const DonorDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [donor, setDonor] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDonorData = async () => {
-      try {
-        const data = await fetchWithAuth('/donor-dashboard');
-        setDonor(data);
-      } catch (error) {
-        console.error('Fetch error:', error);
-        setError(error.message);
-        if (error.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-        }
-      } finally {
-        setIsLoading(false);
+  // Define fetchDonorData outside useEffect
+  const fetchDonorData = async () => {
+    try {
+      const data = await fetchWithAuth('/donor-dashboard');
+      setDonor(data);
+    } catch (error) {
+      console.error('Fetch error:', error);
+      setError(error.message);
+      if (error.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
       }
-    };
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchDonorData();
   }, [navigate]);
+
+  // Refetch data when refresh param is detected
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    if (urlParams.get('refresh')) {
+      setIsLoading(true);
+      fetchDonorData();
+      // Remove the refresh param from URL after refetch
+      navigate('/donor-dashboard', { replace: true });
+    }
+  }, [location.search, navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -63,9 +76,8 @@ const DonorDashboard = () => {
     );
   }
 
-  if (!donor) return null;
+  if (isLoading || !donor) return null;
 
-  // Calculate donation metrics
   const oneTimeDonations = (donor.donations || []).filter((d) => d.frequency === "one-time").map((d) => ({
     charity: d.charity,
     amount: `$${d.amount.toFixed(2)}`,
@@ -74,8 +86,8 @@ const DonorDashboard = () => {
   const recurringDonations = (donor.donations || []).filter((d) => d.frequency !== "one-time").map((d) => ({
     charity: d.charity,
     amount: `$${d.amount.toFixed(2)}`,
-    startDate: d.date, // Adjust based on backend response
-    billingDate: d.date // Adjust if backend provides billing date
+    startDate: d.date,
+    billingDate: d.date
   }));
   const totalDonations = oneTimeDonations.reduce(
     (sum, d) => sum + parseFloat(d.amount.replace("$", "")),
@@ -479,8 +491,8 @@ const DonorDashboard = () => {
                                   {donation.startDate}
                                 </td>
                                 <td className="table-Donor-Recurring-Donations-column-600 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                  {donation.billingDate}
-                                </td>
+                                    {donation.billingDate}
+                                  </td>
                               </tr>
                             ))
                           ) : (
