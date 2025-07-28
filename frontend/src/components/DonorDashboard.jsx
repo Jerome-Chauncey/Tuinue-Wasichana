@@ -1,47 +1,38 @@
 import React, { useEffect, useState } from "react";
 import { Route, Routes, Link, useNavigate } from "react-router-dom";
 import "../css/DonorDashboard.css";
-import { API_BASE_URL } from '../config';
-
-
 
 const DonorDashboard = () => {
   const navigate = useNavigate();
   const [donor, setDonor] = useState(null);
   const [error, setError] = useState(null);
 
-useEffect(() => {
-  const fetchDonorData = async () => {
-    // Verify the URL is accessible
-    const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/donor-dashboard`;
-    console.log("Fetching from:", apiUrl);
-    
-    try {
-      const response = await fetch(apiUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}`
-        },
-        credentials: "include"
-      });
+  useEffect(() => {
+    const fetchDonorData = async () => {
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/donor-dashboard`;
+      console.log("Fetching from:", apiUrl);
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      const data = await response.json();
-      setDonor(data);
-      
-    } catch (err) {
-      console.error("Fetch failed:", {
-        url: apiUrl,
-        error: err.message
-      });
-      setError("Failed to load data");
-    }
-  };
+      try {
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          },
+          credentials: "include",
+        });
 
-  fetchDonorData();
-}, []);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        setDonor(data);
+      } catch (err) {
+        console.error("Fetch failed:", { url: apiUrl, error: err.message });
+        setError("Failed to load data");
+      }
+    };
+
+    fetchDonorData();
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -81,26 +72,26 @@ useEffect(() => {
 
   // Calculate donation metrics
   const oneTimeDonations = donor.donations
-    .filter((d) => d.donationType === "one-time")
+    .filter((d) => d.donationType === "one-time" || d.frequency === "one-time")
     .map((d) => ({
-      charity: d.charity,
-      amount: d.amount,
-      date: d.date,
+      charity: d.charity_name || "Unknown Charity",
+      amount: `KSH ${parseFloat(d.amount).toFixed(2)}`, // Format as KSH
+      date: d.date ? new Date(d.date).toLocaleDateString() : "N/A",
     }));
   const recurringDonations = donor.donations
-    .filter((d) => d.donationType === "recurring")
+    .filter((d) => d.donationType === "monthly" || d.frequency === "monthly")
     .map((d) => ({
-      charity: d.charity,
-      amount: d.amount,
-      startDate: d.start_date,
-      billingDate: d.billing_date,
+      charity: d.charity_name || "Unknown Charity",
+      amount: `KSH ${parseFloat(d.amount).toFixed(2)}`, // Format as KSH
+      startDate: d.start_date ? new Date(d.start_date).toLocaleDateString() : "N/A",
+      billingDate: d.billing_date ? new Date(d.billing_date).toLocaleDateString() : "N/A",
     }));
   const totalDonations = oneTimeDonations.reduce(
-    (sum, d) => sum + parseFloat(d.amount.replace("$", "")),
+    (sum, d) => sum + parseFloat(d.amount.replace("KSH ", "")),
     0
   );
   const recurringDonationsTotal = recurringDonations.reduce(
-    (sum, d) => sum + parseFloat(d.amount.replace("$", "")),
+    (sum, d) => sum + parseFloat(d.amount.replace("KSH ", "")),
     0
   );
   const uniqueCharities = new Set(donor.charities.map((c) => c.name)).size;
@@ -193,7 +184,7 @@ useEffect(() => {
                         fill="currentColor"
                         viewBox="0 0 256 256"
                       >
-                        <path d="M117.25,157.92a60,60,0,1,0-66.50,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z" />
+                        <path d="M117.25,157.92a60,60,0,1,0-66.50,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,0,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z" />
                       </svg>
                     </div>
                     <p className="text-[#101618] text-sm font-medium leading-normal">
@@ -276,7 +267,7 @@ useEffect(() => {
                         Total Donations
                       </p>
                       <p className="text-[#101618] tracking-tight text-2xl font-bold leading-tight">
-                        ${totalDonations.toLocaleString()}
+                        KSH {totalDonations.toLocaleString()}
                       </p>
                     </div>
                     <div className="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-6 bg-[#eaeff1]">
@@ -284,7 +275,7 @@ useEffect(() => {
                         Recurring Donations (Monthly)
                       </p>
                       <p className="text-[#101618] tracking-tight text-2xl font-bold leading-tight">
-                        ${recurringDonationsTotal.toLocaleString()}
+                        KSH {recurringDonationsTotal.toLocaleString()}
                       </p>
                     </div>
                     <div className="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-6 bg-[#eaeff1]">
@@ -566,7 +557,7 @@ useEffect(() => {
                             Charity
                           </p>
                           <p className="text-[#101618] text-sm font-normal leading-normal">
-                            {story.charity}
+                            {story.charity_name}
                           </p>
                         </div>
                         <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
@@ -574,7 +565,7 @@ useEffect(() => {
                             Beneficiary
                           </p>
                           <p className="text-[#101618] text-sm font-normal leading-normal">
-                            {story.beneficiary}
+                            {story.beneficiary || "N/A"}
                           </p>
                         </div>
                         <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
@@ -582,7 +573,7 @@ useEffect(() => {
                             Inventory Sent
                           </p>
                           <p className="text-[#101618] text-sm font-normal leading-normal">
-                            {story.inventory}
+                            {story.inventory || "N/A"}
                           </p>
                         </div>
                       </div>
