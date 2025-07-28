@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_restful import Api
@@ -17,32 +17,65 @@ api = Api()
 def create_app():
     app = Flask(__name__)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("DATABASE_URL")  
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY")
-    app.config['SECRET_KEY'] = os.getenv("FLASK_SECRET_KEY")
-    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
-    app.config['CORS_SUPPORTS_CREDENTIALS'] = True
-    app.config['SQLALCHEMY_ECHO'] = True
+    
+    app.config.update({
+        'SQLALCHEMY_DATABASE_URI': os.getenv("DATABASE_URL"),
+        'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+        'JWT_SECRET_KEY': os.getenv("JWT_SECRET_KEY"),
+        'SECRET_KEY': os.getenv("FLASK_SECRET_KEY"),
+        'JSONIFY_PRETTYPRINT_REGULAR': True,
+        'CORS_SUPPORTS_CREDENTIALS': True,
+        'SQLALCHEMY_ECHO': True,
+        'JWT_TOKEN_LOCATION': ['headers', 'cookies'],  
+        'PROPAGATE_EXCEPTIONS': True  # Better error handling
+    })
 
-
+    
     CORS(app,
-        origins=["http://localhost:5173","https://tuinue-wasichana-ui-dw85.onrender.com" ],
-        supports_credentials=True,  
-        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-        expose_headers=["Content-Type"],
-        max_age=600)
+        resources={
+            r"/api/*": {  
+                "origins": [
+                    "http://localhost:5173",  
+                    "https://tuinue-wasichana-ui-dw85.onrender.com",  
+                    "https://tuinue-wasichana-ui.onrender.com"  
+                ],
+                "supports_credentials": True,
+                "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+                "allow_headers": [
+                    "Content-Type",
+                    "Authorization",
+                    "X-Requested-With",
+                    "Access-Control-Allow-Credentials"
+                ],
+                "expose_headers": [
+                    "Content-Type",
+                    "X-Total-Count",  
+                    "Access-Control-Allow-Origin"
+                ],
+                "max_age": 600
+            }
+        }
+    )
 
+    
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    
+    api.init_app(app)  
 
+    
     from backend.routes.routes import init_routes
     init_routes(app)
 
-
+    
+    @app.before_request
+    def handle_options():
+        if request.method == "OPTIONS":
+            response = app.make_default_options_response()
+            response.headers['Access-Control-Max-Age'] = 600
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+            return response
 
     return app
 
