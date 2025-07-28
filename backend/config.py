@@ -1,41 +1,22 @@
-import os
-from dotenv import load_dotenv
-from flask import Flask, request, jsonify
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_restful import Api
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-
-load_dotenv()
+import os
 
 db = SQLAlchemy()
-migrate = Migrate()
 jwt = JWTManager()
 
 def create_app():
     app = Flask(__name__)
-    api = Api(app)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///default.db')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'default-secret-key')
+    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'default-secret-key')
 
-    
-    app.config.update({
-        'SQLALCHEMY_DATABASE_URI': os.getenv("DATABASE_URL"),
-        'SQLALCHEMY_TRACK_MODIFICATIONS': False,
-        'JWT_SECRET_KEY': os.getenv("JWT_SECRET_KEY"),
-        'SECRET_KEY': os.getenv("FLASK_SECRET_KEY"),
-        'JSONIFY_PRETTYPRINT_REGULAR': True,
-        'CORS_SUPPORTS_CREDENTIALS': True,
-        'SQLALCHEMY_ECHO': True,
-        'JWT_TOKEN_LOCATION': ['headers', 'cookies'],
-        'PROPAGATE_EXCEPTIONS': True,
-        'SMPT_SERVER': os.getenv("SMTP_SERVER"),
-        'SMTP_PORT': os.getenv("SMTP_PORT"),
-        'MAILTRAP_USERNAME': os.getenv("MAILTRAP_USERNAME"),
-        'MAILTRAP_PASSWORD': os.getenv("MAILTRAP_PASSWORD"),
-        'FROM_EMAIL': os.getenv("FROM_EMAIL"),
-    })
+    db.init_app(app)
+    jwt.init_app(app)
 
-    # Configure CORS to handle all /api/* routes
     CORS(app,
          resources={
              r"/api/*": {
@@ -48,28 +29,99 @@ def create_app():
          }
     )
 
-
-    db.init_app(app)
-    migrate.init_app(app, db)
-    jwt.init_app(app)
-    api.init_app(app)
-    
-    from backend.routes.routes import init_routes
-    init_routes(app)
-    app.logger.info("API Blueprint registered via init_routes")
-    
-    from backend.routes.reset_password import reset_bp
-    app.register_blueprint(reset_bp)
-
-    @app.errorhandler(404)
-    def not_found(error):
-        response = jsonify({"error": "Not found"})
-        return response, 404
+    with app.app_context():
+        from backend.routes.routes import init_routes
+        init_routes(app)
 
     return app
 
-
 app = create_app()
-if __name__ == "__main__":
-    app.run(port=5000, debug=True)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# import os
+# from dotenv import load_dotenv
+# from flask import Flask, request, jsonify
+# from flask_sqlalchemy import SQLAlchemy
+# from flask_migrate import Migrate
+# from flask_restful import Api
+# from flask_jwt_extended import JWTManager
+# from flask_cors import CORS
+
+# load_dotenv()
+
+# db = SQLAlchemy()
+# migrate = Migrate()
+# jwt = JWTManager()
+
+# def create_app():
+#     app = Flask(__name__)
+#     api = Api(app)
+
+#     app.config.update({
+#         'SQLALCHEMY_DATABASE_URI': os.getenv("DATABASE_URL"),
+#         'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+#         'JWT_SECRET_KEY': os.getenv("JWT_SECRET_KEY"),
+#         'SECRET_KEY': os.getenv("FLASK_SECRET_KEY"),
+#         'JSONIFY_PRETTYPRINT_REGULAR': True,
+#         'CORS_SUPPORTS_CREDENTIALS': True,
+#         'SQLALCHEMY_ECHO': True,
+#         'JWT_TOKEN_LOCATION': ['headers', 'cookies'],
+#         'PROPAGATE_EXCEPTIONS': True
+#     })
+
+#     # Configure CORS to handle all /api/* routes
+#     CORS(app,
+#          resources={
+#              r"/api/*": {
+#                  "origins": ["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"],
+#                  "supports_credentials": True,
+#                  "methods": ["GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
+#                  "allow_headers": ["Content-Type", "Authorization"],
+#                  "expose_headers": ["Content-Type", "Authorization"]
+#              }
+#          }
+#     )
+
+#     db.init_app(app)
+#     migrate.init_app(app, db)
+#     jwt.init_app(app)
+#     api.init_app(app)
+
+#     from backend.routes.routes import init_routes
+#     init_routes(app)
+#     app.logger.info("API Blueprint registered via init_routes")
+
+   
+#     @app.errorhandler(404)
+#     def not_found(error):
+#         response = jsonify({"error": "Not found"})
+#         return response, 404
+
+#     return app
+
+# app = create_app()
+
+# if __name__ == "__main__":
+#     app.run(port=5000, debug=True)
