@@ -207,89 +207,66 @@ def donor_signup():
     return jsonify({"message": "Donor registered successfully"}), 201
 
 
-@api.route("/donor-dashboard", methods=["GET"])
+@api.route('/api/donor-dashboard', methods=['GET'])
 @jwt_required()
 def donor_dashboard():
     try:
-        identity = get_jwt_identity()
-        
-        if not identity or 'email' not in identity:
-            return jsonify({"error": "Invalid token"}), 401
+        current_user = get_jwt_identity()
+        if current_user.get('role') != 'donor':
+            return jsonify({'error': 'Unauthorized'}), 403
 
-        donor = Donor.query.filter_by(email=identity["email"]).first()
+        # Get donor with relationships
+        donor = Donor.query.filter_by(email=current_user['email']).first()
         if not donor:
-            return jsonify({"error": "Donor not found"}), 404
+            return jsonify({'error': 'Donor not found'}), 404
 
-        sql = """
-        SELECT 
-            d.id,
-            d.amount,
-            COALESCE(d.date, d.created_at) as donation_date,
-            d.frequency,
-            d.is_anonymous,
-            d.donor_name,
-            c.name as charity_name,
-            c.mission as charity_mission
-        FROM donations d
-        JOIN charities c ON d.charity_id = c.id
-        WHERE d.donor_id = :donor_id
-        ORDER BY donation_date DESC
-        """
-        
-        with db.engine.connect() as connection:
-            result = connection.execute(text(sql), {"donor_id": donor.id})
-            donations = [dict(row) for row in result]
-
-        if not donations:
-            return jsonify({
-                "donor": {
-                    "name": donor.name,
-                    "email": donor.email
-                },
-                "donations": [],
-                "charities": [],
-                "total_donated": 0
+        # Get donations with proper serialization
+        donations = []
+        for donation in donor.donations:
+            donations.append({
+                'id': donation.id,
+                'charity_id': donation.charity_id,
+                'charity_name': donation.charity.name if donation.charity else None,
+                'amount': float(donation.amount),
+                'frequency': donation.frequency,
+                'date': donation.date.isoformat() if donation.date else None,
+                'is_anonymous': donation.is_anonymous
             })
 
-        donations_data = []
-        charities = set()
-        total_donated = 0
-
-        for donation in donations:
-            donation_date = donation['donation_date']
-            # Handle if donation_date is a string - convert to datetime
-            if donation_date and isinstance(donation_date, str):
-                donation_date = datetime.fromisoformat(donation_date)
-
-            donations_data.append({
-                "id": donation['id'],
-                "amount": float(donation['amount']),
-                "charity": donation['charity_name'],
-                "mission": donation['charity_mission'],
-                "date": donation_date.strftime('%Y-%m-%d') if donation_date else None,
-                "frequency": donation['frequency'],
-                "is_anonymous": donation['is_anonymous'],
-                "donor_name": donation['donor_name']
+        # Get charities with proper serialization
+        charities = []
+        for charity in donor.charities:
+            charities.append({
+                'id': charity.id,
+                'name': charity.name,
+                'mission': charity.mission,
+                'logo_url': charity.logo_url
             })
-            charities.add((donation['charity_name'], donation['charity_mission']))
-            total_donated += float(donation['amount'])
+
+        # Get stories with proper serialization
+        stories = []
+        for charity in donor.charities:
+            for story in charity.stories:
+                stories.append({
+                    'id': story.id,
+                    'title': story.title,
+                    'description': story.description,
+                    'image': story.image,
+                    'charity_name': charity.name,
+                    'created_at': story.created_at.isoformat() if story.created_at else None
+                })
 
         return jsonify({
-            "donor": {
-                "name": donor.name,
-                "email": donor.email
-            },
-            "donations": donations_data,
-            "charities": [{"name": c[0], "mission": c[1]} for c in charities],
-            "total_donated": total_donated
-        })
+            'name': donor.name,
+            'email': donor.email,
+            'donations': donations,
+            'charities': charities,
+            'stories': stories
+        }), 200
 
     except Exception as e:
-        current_app.logger.error(f"CRITICAL Donor dashboard error: {str(e)}\n{traceback.format_exc()}")
-        return jsonify({
-            "error": "Internal server error",
-            "details": "Please contact support"
-        }), 500
+        current_app.logger.error(f'CRITICAL Donor dashboard error: {str(e)}')
+        return jsonify({'error': 'Internal server error'}), 500
     
 
 
