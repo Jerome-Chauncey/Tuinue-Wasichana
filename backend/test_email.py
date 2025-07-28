@@ -1,10 +1,8 @@
-from email_service import send_email
+from email_service import send_password_reset_email
+from token_service import generate_reset_token
 
-# Replace this with your own email if using a real SMTP service
-test_recipient = "test@example.com"
 
-send_email(
-    to_email=test_recipient,
-    subject="Test Email from Tuinue Wasichana",
-    content="This is a test email to confirm that Mailtrap integration is working!"
-)
+to_email = "test@example.com"
+email = to_email
+token = generate_reset_token(email)
+send_password_reset_email(email, token)

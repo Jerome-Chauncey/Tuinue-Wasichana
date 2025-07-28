@@ -29,6 +29,11 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
     app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY')
+    app.config['SMTP_SERVER'] = "sandbox.smtp.mailtrap.io"
+    app.config['SMTP_PORT'] = 587
+    app.config['MAILTRAP_USERNAME'] = os.getenv("MAILTRAP_USERNAME")
+    app.config['MAILTRAP_PASSWORD'] = os.getenv("MAILTRAP_PASSWORD")
+    app.config['FROM_EMAIL'] = os.getenv("FROM_EMAIL")
     app.json.compact = False
 
     # Configure CORS with specific settings
@@ -53,6 +58,13 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
     api.init_app(app)
+    from backend.resources.auth import Register, Login, Profile
+    api.add_resource(Register, '/api/auth/register')
+    api.add_resource(Login,    '/api/auth/login')
+    api.add_resource(Profile,  '/api/auth/profile')
+    from backend.routes.reset_password import reset_bp
+    app.register_blueprint(reset_bp)
+    
 
 
 
