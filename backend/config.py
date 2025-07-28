@@ -12,10 +12,11 @@ load_dotenv()
 db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
-api = Api()
 
 def create_app():
     app = Flask(__name__)
+    api = Api(app)
+
 
     
     app.config.update({
@@ -32,30 +33,15 @@ def create_app():
 
     
     CORS(app,
-        resources={
-            r"/api/*": {  
-                "origins": [
-                    "http://localhost:5173",  
-                    "https://tuinue-wasichana-ui-dw85.onrender.com",  
-                    "https://tuinue-wasichana-ui.onrender.com"  
-                ],
-                "supports_credentials": True,
-                "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-                "allow_headers": [
-                    "Content-Type",
-                    "Authorization",
-                    "X-Requested-With",
-                    "Access-Control-Allow-Credentials"
-                ],
-                "expose_headers": [
-                    "Content-Type",
-                    "X-Total-Count",  
-                    "Access-Control-Allow-Origin"
-                ],
-                "max_age": 600
-            }
+    resources={
+        r"/api/*": {
+            "origins": ["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"],
+            "supports_credentials": True,
+            "methods": ["GET", "POST", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"]
         }
-    )
+    }
+)
 
     
     db.init_app(app)

@@ -10,32 +10,40 @@ const DonorDashboard = () => {
 
   useEffect(() => {
     const fetchDonorData = async () => {
-      const token = localStorage.getItem("token"); // Get token from storage
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/donor-dashboard`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/api/donor-dashboard`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            credentials: "include",
+            mode: "cors",
+          }
+        );
 
         if (!response.ok) {
           if (response.status === 401) {
-            // Token expired or invalid
             localStorage.removeItem("token");
-            localStorage.removeItem("role");
             navigate("/login");
             return;
           }
-          throw new Error("Failed to fetch donor data");
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
         setDonor(data);
-      } catch (err) {
-        setError(err.message);
+      } catch (error) {
+        console.error("Fetch error:", error);
+        setError(error.message || "Failed to load donor data");
       }
     };
 

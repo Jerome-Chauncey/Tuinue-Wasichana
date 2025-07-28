@@ -207,65 +207,71 @@ def donor_signup():
     return jsonify({"message": "Donor registered successfully"}), 201
 
 
-@api.route('/api/donor-dashboard', methods=['GET'])
-@jwt_required()
+@api.route('/api/donor-dashboard', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)  # Allow OPTIONS without auth
 def donor_dashboard():
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'preflight'})
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 200
+
     try:
         current_user = get_jwt_identity()
-        if current_user.get('role') != 'donor':
+        if not current_user or current_user.get('role') != 'donor':
             return jsonify({'error': 'Unauthorized'}), 403
 
-        # Get donor with relationships
         donor = Donor.query.filter_by(email=current_user['email']).first()
         if not donor:
             return jsonify({'error': 'Donor not found'}), 404
 
-        # Get donations with proper serialization
-        donations = []
-        for donation in donor.donations:
-            donations.append({
-                'id': donation.id,
-                'charity_id': donation.charity_id,
-                'charity_name': donation.charity.name if donation.charity else None,
-                'amount': float(donation.amount),
-                'frequency': donation.frequency,
-                'date': donation.date.isoformat() if donation.date else None,
-                'is_anonymous': donation.is_anonymous
-            })
+        # Serialize donations
+        donations = [{
+            'id': d.id,
+            'charity_id': d.charity_id,
+            'charity_name': d.charity.name if d.charity else None,
+            'amount': float(d.amount),
+            'frequency': d.frequency,
+            'date': d.date.isoformat() if d.date else None,
+            'is_anonymous': d.is_anonymous
+        } for d in donor.donations]
 
-        # Get charities with proper serialization
-        charities = []
-        for charity in donor.charities:
-            charities.append({
-                'id': charity.id,
-                'name': charity.name,
-                'mission': charity.mission,
-                'logo_url': charity.logo_url
-            })
+        # Serialize charities
+        charities = [{
+            'id': c.id,
+            'name': c.name,
+            'mission': c.mission,
+            'logo_url': c.logo_url
+        } for c in donor.charities]
 
-        # Get stories with proper serialization
-        stories = []
-        for charity in donor.charities:
-            for story in charity.stories:
-                stories.append({
-                    'id': story.id,
-                    'title': story.title,
-                    'description': story.description,
-                    'image': story.image,
-                    'charity_name': charity.name,
-                    'created_at': story.created_at.isoformat() if story.created_at else None
-                })
+        # Serialize stories
+        stories = [{
+            'id': s.id,
+            'title': s.title,
+            'description': s.description,
+            'image': s.image,
+            'charity_name': s.charity.name,
+            'created_at': s.created_at.isoformat() if s.created_at else None
+        } for c in donor.charities for s in c.stories]
 
-        return jsonify({
+        response = jsonify({
             'name': donor.name,
             'email': donor.email,
             'donations': donations,
             'charities': charities,
             'stories': stories
-        }), 200
+        })
+        
+        # Add CORS headers to main response
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        
+        return response, 200
 
     except Exception as e:
-        current_app.logger.error(f'CRITICAL Donor dashboard error: {str(e)}')
+        current_app.logger.error(f'Donor dashboard error: {str(e)}')
         return jsonify({'error': 'Internal server error'}), 500
     
 
