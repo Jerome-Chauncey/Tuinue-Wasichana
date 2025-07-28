@@ -293,63 +293,86 @@ def donor_dashboard():
     
 
 
-@api.route("/donate", methods=["POST", "OPTIONS"])
-@jwt_required(optional=True) 
-@cross_origin()
+from flask import request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from your_models import Donation, Donor, Charity  # Replace with your actual models
+from your_database import db  # Replace with your db instance
+
+@api.route('/api/donate', methods=['POST', 'OPTIONS'])
+@jwt_required(optional=True)  # Allows OPTIONS without JWT
 def donate():
+    # Handle preflight request
+    if request.method == 'OPTIONS':
+        response = jsonify({'message': 'Preflight successful'})
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 200
+
+    # Get current user from JWT
+    current_user = get_jwt_identity()
+    if not current_user or current_user.get('role') != 'donor':
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    # Parse request data
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    # Validate required fields
+    required_fields = ['charity_id', 'amount']
+    if not all(field in data for field in required_fields):
+        return jsonify({'error': 'Missing required fields'}), 400
+
     try:
-        identity = get_jwt_identity()
+        charity_id = int(data['charity_id'])
+        amount = float(data['amount'])
+        frequency = data.get('frequency', 'one-time')
+        anonymous = bool(data.get('anonymous', False))
+        
+        # Validate amount
+        if amount <= 0:
+            return jsonify({'error': 'Amount must be positive'}), 400
 
-        if identity["role"] != "donor":
-            return jsonify({"error": "Only donors can make donations"}), 403
-
-        donor = Donor.query.filter_by(email=identity["email"]).first()
-        if not donor:
-            return jsonify({"error": "Donor not found"}), 404
-
-        data = request.get_json()
-
-        charity_id = data.get("charity_id")
-        amount = data.get("amount")
-        frequency = data.get("frequency", "one-time")
-        anonymous = data.get("anonymous", False)
-
-        if not charity_id or not amount:
-            return jsonify({"error": "Charity ID and amount are required"}), 400
-
-        try:
-            amount = float(amount)
-            if amount <= 0:
-                return jsonify({"error": "Amount must be greater than zero"}), 400
-        except ValueError:
-            return jsonify({"error": "Invalid amount value"}), 400
-
+        # Check charity exists
         charity = Charity.query.get(charity_id)
-        if not charity or charity.status not in ["approved", "Active"]:
-            return jsonify({"error": "Charity not found or not approved"}), 404
+        if not charity:
+            return jsonify({'error': 'Charity not found'}), 404
 
+        # Get donor
+        donor = Donor.query.filter_by(email=current_user['email']).first()
+        if not donor:
+            return jsonify({'error': 'Donor not found'}), 404
+
+        # Create donation
         donation = Donation(
             donor_id=donor.id,
             charity_id=charity.id,
             amount=amount,
             frequency=frequency,
             is_anonymous=anonymous,
-            donor_name=donor.name if not anonymous else "Anonymous"
+            donor_name='Anonymous' if anonymous else donor.name
         )
 
         db.session.add(donation)
-
         
+        # Update donor-charity relationship if needed
         if charity not in donor.charities:
             donor.charities.append(charity)
 
         db.session.commit()
 
-        return jsonify({"message": "Donation successful"}), 201
+        return jsonify({
+            'message': 'Donation successful',
+            'donation_id': donation.id
+        }), 201
 
+    except ValueError:
+        return jsonify({'error': 'Invalid data format'}), 400
     except Exception as e:
-        current_app.logger.error(f"Donation error: {str(e)}\n{traceback.format_exc()}")
-        return jsonify({"error": "Internal server error"}), 500
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 
 
