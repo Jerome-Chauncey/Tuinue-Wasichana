@@ -17,7 +17,6 @@ from sqlalchemy import text
 
 api = Blueprint('api', __name__)
 
-
 @api.route("/login", methods=["POST"])
 @cross_origin()
 def login():
@@ -47,8 +46,10 @@ def login():
         return jsonify({"error": f"Charity is {user.status}", "charityStatus": user.status}), 403
 
     access_token = create_access_token(identity={"email": email, "role": role})
-    return jsonify({"token": access_token, "role": role, "charityStatus": user.status if role == "charity" else None}), 200
-
+    response = jsonify({"token": access_token, "role": role, "charityStatus": user.status if role == "charity" else None})
+    response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response, 200
 
 @api.route("/charity/status", methods=["GET"])
 @jwt_required()
@@ -60,8 +61,10 @@ def charity_status():
     charity = Charity.query.filter_by(email=identity["email"]).first()
     if not charity:
         return jsonify({"error": "Charity not found"}), 404
-    return jsonify({"status": charity.status}), 200
-
+    response = jsonify({"status": charity.status})
+    response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response, 200
 
 @api.route("/charity-signup", methods=["POST", "OPTIONS"])
 @cross_origin()
@@ -70,7 +73,6 @@ def charity_signup():
         return jsonify({}), 200
         
     data = request.get_json()
-    # Your existing charity signup logic
     name = data.get("name")
     email = data.get("email")
     password = data.get("password")
@@ -94,8 +96,10 @@ def charity_signup():
     db.session.add(new_charity)
     db.session.commit()
 
-    return jsonify({"message": "Application submitted successfully"}), 201
-
+    response = jsonify({"message": "Application submitted successfully"})
+    response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response, 201
 
 @api.route("/charity/dashboard", methods=["GET"])
 @jwt_required()
@@ -119,7 +123,7 @@ def charity_dashboard():
 
     stories = Story.query.filter_by(charity_id=charity.id).all()
 
-    return jsonify({
+    response = jsonify({
         "name": charity.name,
         "donors": [{
             "name": donor.name,
@@ -135,22 +139,28 @@ def charity_dashboard():
             "beneficiary": Beneficiary.query.get(story.beneficiary_id).name if story.beneficiary_id else "Unknown",
             "image": story.image or "/static/default.jpg"
         } for story in stories]
-    }), 200
-
+    })
+    response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response, 200
 
 @api.route("/charities", methods=["GET", "POST"])
 @cross_origin()
 def charities():
+    current_app.logger.info("Accessing /api/charities endpoint")
     if request.method == "GET":
         charities = Charity.query.all()
-        return jsonify([{
+        current_app.logger.info(f"Found {len(charities)} charities")
+        response = jsonify([{
             "id": c.id,
             "name": c.name,
             "email": c.email,
             "mission": c.mission,
             "status": c.status
-        } for c in charities]), 200
-
+        } for c in charities])
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 200
     elif request.method == "POST":
         data = request.get_json()
         name = data.get("name")
@@ -174,8 +184,10 @@ def charities():
         db.session.add(new_charity)
         db.session.commit()
 
-        return jsonify({"message": "Charity created successfully"}), 201
-
+        response = jsonify({"message": "Charity created successfully"})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 201
 
 @api.route("/donor-signup", methods=["POST", "OPTIONS"])
 @cross_origin()
@@ -204,8 +216,10 @@ def donor_signup():
     db.session.add(new_donor)
     db.session.commit()
 
-    return jsonify({"message": "Donor registered successfully"}), 201
-
+    response = jsonify({"message": "Donor registered successfully"})
+    response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response, 201
 
 @api.route("/donor-dashboard", methods=["GET"])
 @jwt_required()
@@ -241,7 +255,7 @@ def donor_dashboard():
             donations = [dict(row) for row in result]
 
         if not donations:
-            return jsonify({
+            response = jsonify({
                 "donor": {
                     "name": donor.name,
                     "email": donor.email
@@ -250,6 +264,9 @@ def donor_dashboard():
                 "charities": [],
                 "total_donated": 0
             })
+            response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            return response, 200
 
         donations_data = []
         charities = set()
@@ -257,7 +274,6 @@ def donor_dashboard():
 
         for donation in donations:
             donation_date = donation['donation_date']
-            # Handle if donation_date is a string - convert to datetime
             if donation_date and isinstance(donation_date, str):
                 donation_date = datetime.fromisoformat(donation_date)
 
@@ -274,7 +290,7 @@ def donor_dashboard():
             charities.add((donation['charity_name'], donation['charity_mission']))
             total_donated += float(donation['amount'])
 
-        return jsonify({
+        response = jsonify({
             "donor": {
                 "name": donor.name,
                 "email": donor.email
@@ -283,41 +299,39 @@ def donor_dashboard():
             "charities": [{"name": c[0], "mission": c[1]} for c in charities],
             "total_donated": total_donated
         })
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 200
 
     except Exception as e:
         current_app.logger.error(f"CRITICAL Donor dashboard error: {str(e)}\n{traceback.format_exc()}")
-        return jsonify({
+        response = jsonify({
             "error": "Internal server error",
             "details": "Please contact support"
-        }), 500
-    
-
-
-
+        })
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 500
 
 @api.route('/api/donate', methods=['POST', 'OPTIONS'])
-@jwt_required(optional=True)  
+@jwt_required(optional=True)
 def donate():
-    # Handle preflight request
     if request.method == 'OPTIONS':
         response = jsonify({'message': 'Preflight successful'})
-        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com'))
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response, 200
 
-    
     current_user = get_jwt_identity()
     if not current_user or current_user.get('role') != 'donor':
         return jsonify({'error': 'Unauthorized'}), 401
 
-    
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No data provided'}), 400
 
-   
     required_fields = ['charity_id', 'amount']
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Missing required fields'}), 400
@@ -328,21 +342,17 @@ def donate():
         frequency = data.get('frequency', 'one-time')
         anonymous = bool(data.get('anonymous', False))
         
-        # Validate amount
         if amount <= 0:
             return jsonify({'error': 'Amount must be positive'}), 400
 
-        # Check charity exists
         charity = Charity.query.get(charity_id)
         if not charity:
             return jsonify({'error': 'Charity not found'}), 404
 
-        # Get donor
         donor = Donor.query.filter_by(email=current_user['email']).first()
         if not donor:
             return jsonify({'error': 'Donor not found'}), 404
 
-        # Create donation
         donation = Donation(
             donor_id=donor.id,
             charity_id=charity.id,
@@ -354,28 +364,30 @@ def donate():
 
         db.session.add(donation)
         
-        # Update donor-charity relationship if needed
         if charity not in donor.charities:
             donor.charities.append(charity)
 
         db.session.commit()
 
-        return jsonify({
+        response = jsonify({
             'message': 'Donation successful',
             'donation_id': donation.id
-        }), 201
+        })
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 201
 
     except ValueError:
-        return jsonify({'error': 'Invalid data format'}), 400
+        response = jsonify({'error': 'Invalid data format'})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 400
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-
-
-
-
-
+        response = jsonify({'error': str(e)})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 500
 
 @api.route("/admin/charities", methods=["GET", "PUT"])
 @jwt_required()
@@ -387,12 +399,15 @@ def admin_charities():
 
     if request.method == "GET":
         charities = Charity.query.all()
-        return jsonify([{
+        response = jsonify([{
             "id": c.id,
             "name": c.name,
             "email": c.email,
             "status": c.status
-        } for c in charities]), 200
+        } for c in charities])
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 200
 
     elif request.method == "PUT":
         data = request.get_json()
@@ -408,8 +423,10 @@ def admin_charities():
 
         charity.status = status
         db.session.commit()
-        return jsonify({"message": f"Charity status updated to {status}"}), 200
-
+        response = jsonify({"message": f"Charity status updated to {status}"})
+        response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 200
 
 @api.route("/stories", methods=["POST"])
 @jwt_required()
@@ -444,8 +461,11 @@ def create_story():
     db.session.add(new_story)
     db.session.commit()
 
-    return jsonify({"message": "Story created successfully"}), 201
-
+    response = jsonify({"message": "Story created successfully"})
+    response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', 'https://tuinue-wasichana-ui-dw85.onrender.com')
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response, 201
 
 def init_routes(app):
+    app.logger.info("Registering API Blueprint with /api prefix")
     app.register_blueprint(api, url_prefix="/api")
