@@ -11,6 +11,7 @@ class Beneficiary(db.Model):
 
     charity = db.relationship('Charity', back_populates='beneficiaries')
     stories = db.relationship('Story', back_populates='beneficiary', cascade='all, delete-orphan')
+    inventory_items = db.relationship('Inventory', back_populates='beneficiary', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<Beneficiary {self.name}>"
