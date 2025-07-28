@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
@@ -14,25 +14,26 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'default-secret-key')
     app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'default-secret-key')
     
-    origins = [
-        "http://localhost:5173",  # Development
-        "https://tuinue-wasichana-ui-dw85.onrender.com",  
-        "https://tuinue-wasichana-api-jauh.onrender.com"  
-    ]
+    cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,https://tuinue-wasichana-ui-dw85.onrender.com').split(',')
     
     CORS(
         app,
         resources={
             r"/*": {
-                "origins": origins,
+                "origins": cors_origins,
                 "supports_credentials": True,
                 "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
                 "expose_headers": ["Content-Type", "Authorization", "X-Total-Count"],
-                "max_age": 86400  
+                "max_age": 86400
             }
         }
     )
+
+    @app.before_request
+    def handle_options():
+        if request.method == 'OPTIONS':
+            return jsonify({}), 200
 
     db.init_app(app)
     jwt.init_app(app)
