@@ -18,7 +18,7 @@ from sqlalchemy import text
 api = Blueprint('api', __name__)
 
 @api.route("/login", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
+@cross_origin(origins=["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"], supports_credentials=True)
 def login():
     if request.method == "OPTIONS":
         return jsonify({}), 200
@@ -51,21 +51,25 @@ def login():
     return jsonify({"token": access_token, "role": role, "charityStatus": user.status if role == "charity" else None}), 200
 
 @api.route("/charity/status", methods=["GET", "OPTIONS"])
-@jwt_required()
-@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
+@cross_origin(origins=["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"], supports_credentials=True)
 def charity_status():
     if request.method == "OPTIONS":
         return jsonify({}), 200
-    identity = get_jwt_identity()
-    if identity["role"] != "charity":
-        return jsonify({"error": "Unauthorized"}), 403
-    charity = Charity.query.filter_by(email=identity["email"]).first()
-    if not charity:
-        return jsonify({"error": "Charity not found"}), 404
-    return jsonify({"status": charity.status}), 200
+    
+    @jwt_required()
+    def protected():
+        identity = get_jwt_identity()
+        if identity["role"] != "charity":
+            return jsonify({"error": "Unauthorized"}), 403
+        charity = Charity.query.filter_by(email=identity["email"]).first()
+        if not charity:
+            return jsonify({"error": "Charity not found"}), 404
+        return jsonify({"status": charity.status}), 200
+    
+    return protected()
 
 @api.route("/charity-signup", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
+@cross_origin(origins=["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"], supports_credentials=True)
 def charity_signup():
     if request.method == "OPTIONS":
         return jsonify({}), 200
@@ -74,7 +78,7 @@ def charity_signup():
     email = data.get("email")
     password = data.get("password")
     mission = data.get("mission")
-    location = data.get("location", "") 
+    location = data.get("location", "")
 
     if not all([name, email, password, mission]):
         return jsonify({"error": "All fields are required"}), 400
@@ -96,49 +100,53 @@ def charity_signup():
     return jsonify({"message": "Application submitted successfully"}), 201
 
 @api.route("/charity/dashboard", methods=["GET", "OPTIONS"])
-@jwt_required()
-@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
+@cross_origin(origins=["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"], supports_credentials=True)
 def charity_dashboard():
     if request.method == "OPTIONS":
         return jsonify({}), 200
-    identity = get_jwt_identity()
-    if identity["role"] != "charity":
-        return jsonify({"error": "Unauthorized"}), 403
+    
+    @jwt_required()
+    def protected():
+        identity = get_jwt_identity()
+        if identity["role"] != "charity":
+            return jsonify({"error": "Unauthorized"}), 403
 
-    charity = Charity.query.filter_by(email=identity["email"]).first()
-    if not charity:
-        return jsonify({"error": "Charity not found"}), 404
+        charity = Charity.query.filter_by(email=identity["email"]).first()
+        if not charity:
+            return jsonify({"error": "Charity not found"}), 404
 
-    donors = (
-        db.session.query(Donor, Donation)
-        .join(Donation, Donor.id == Donation.donor_id)
-        .join(donors_charities, Donor.id == donors_charities.c.donor_id)
-        .filter(donors_charities.c.charity_id == charity.id)
-        .all()
-    )
+        donors = (
+            db.session.query(Donor, Donation)
+            .join(Donation, Donor.id == Donation.donor_id)
+            .join(donors_charities, Donor.id == donors_charities.c.donor_id)
+            .filter(donors_charities.c.charity_id == charity.id)
+            .all()
+        )
 
-    stories = Story.query.filter_by(charity_id=charity.id).all()
+        stories = Story.query.filter_by(charity_id=charity.id).all()
 
-    return jsonify({
-        "name": charity.name,
-        "donors": [{
-            "name": donor.name,
-            "email": None if donor.is_anonymous else donor.email,
-            "donationType": "monthly" if donation.frequency == "recurring" else donation.frequency,
-            "amount": donation.amount or "$0",
-            "date": donation.date if donation.date else None
-        } for donor, donation in donors],
-        "stories": [{
-            "title": story.title,
-            "description": story.description,
-            "donor": Donor.query.get(story.donor_id).name if story.donor_id else "Unknown",
-            "beneficiary": Beneficiary.query.get(story.beneficiary_id).name if story.beneficiary_id else "Unknown",
-            "image": story.image or "/static/default.jpg"
-        } for story in stories]
-    }), 200
+        return jsonify({
+            "name": charity.name,
+            "donors": [{
+                "name": donor.name,
+                "email": None if donor.is_anonymous else donor.email,
+                "donationType": "monthly" if donation.frequency == "recurring" else donation.frequency,
+                "amount": donation.amount or "$0",
+                "date": donation.date if donation.date else None
+            } for donor, donation in donors],
+            "stories": [{
+                "title": story.title,
+                "description": story.description,
+                "donor": Donor.query.get(story.donor_id).name if story.donor_id else "Unknown",
+                "beneficiary": Beneficiary.query.get(story.beneficiary_id).name if story.beneficiary_id else "Unknown",
+                "image": story.image or "/static/default.jpg"
+            } for story in stories]
+        }), 200
+    
+    return protected()
 
 @api.route("/charities", methods=["GET", "POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
+@cross_origin(origins=["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"], supports_credentials=True)
 def charities():
     if request.method == "OPTIONS":
         return jsonify({}), 200
@@ -179,7 +187,7 @@ def charities():
         return jsonify({"message": "Charity created successfully"}), 201
 
 @api.route("/donor-signup", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
+@cross_origin(origins=["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"], supports_credentials=True)
 def donor_signup():
     if request.method == "OPTIONS":
         return jsonify({}), 200
@@ -207,220 +215,236 @@ def donor_signup():
     return jsonify({"message": "Donor registered successfully"}), 201
 
 @api.route("/donor-dashboard", methods=["GET", "OPTIONS"])
-@jwt_required()
-@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
+@cross_origin(origins=["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"], supports_credentials=True)
 def donor_dashboard():
     if request.method == "OPTIONS":
         return jsonify({}), 200
-    try:
-        identity = get_jwt_identity()
-        if not identity or 'email' not in identity:
-            return jsonify({"error": "Invalid token"}), 401
+    
+    @jwt_required()
+    def protected():
+        try:
+            identity = get_jwt_identity()
+            if not identity or 'email' not in identity:
+                return jsonify({"error": "Invalid token"}), 401
 
-        donor = Donor.query.filter_by(email=identity["email"]).first()
-        if not donor:
-            return jsonify({"error": "Donor not found"}), 404
+            donor = Donor.query.filter_by(email=identity["email"]).first()
+            if not donor:
+                return jsonify({"error": "Donor not found"}), 404
 
-        sql = """
-        SELECT 
-            d.id,
-            d.amount,
-            COALESCE(d.date, d.created_at) as donation_date,
-            d.frequency,
-            d.is_anonymous,
-            d.donor_name,
-            c.name as charity_name,
-            c.mission as charity_mission
-        FROM donations d
-        JOIN charities c ON d.charity_id = c.id
-        WHERE d.donor_id = :donor_id
-        ORDER BY donation_date DESC
-        """
-        
-        with db.engine.connect() as connection:
-            result = connection.execute(text(sql), {"donor_id": donor.id})
-            donations = [dict(row) for row in result]
+            sql = """
+            SELECT 
+                d.id,
+                d.amount,
+                COALESCE(d.date, d.created_at) as donation_date,
+                d.frequency,
+                d.is_anonymous,
+                d.donor_name,
+                c.name as charity_name,
+                c.mission as charity_mission
+            FROM donations d
+            JOIN charities c ON d.charity_id = c.id
+            WHERE d.donor_id = :donor_id
+            ORDER BY donation_date DESC
+            """
+            
+            with db.engine.connect() as connection:
+                result = connection.execute(text(sql), {"donor_id": donor.id})
+                donations = [dict(row) for row in result]
 
-        if not donations:
+            if not donations:
+                return jsonify({
+                    "donor": {"name": donor.name, "email": donor.email},
+                    "donations": [],
+                    "charities": [],
+                    "total_donated": 0
+                }), 200
+
+            donations_data = []
+            charities = set()
+            total_donated = 0
+
+            for donation in donations:
+                donation_date = donation['donation_date']
+                if donation_date and isinstance(donation_date, str):
+                    donation_date = datetime.fromisoformat(donation_date)
+
+                donations_data.append({
+                    "id": donation['id'],
+                    "amount": float(donation['amount']),
+                    "charity": donation['charity_name'],
+                    "mission": donation['charity_mission'],
+                    "date": donation_date.strftime('%Y-%m-%d') if donation_date else None,
+                    "frequency": donation['frequency'],
+                    "is_anonymous": donation['is_anonymous'],
+                    "donor_name": donation['donor_name']
+                })
+                charities.add((donation['charity_name'], donation['charity_mission']))
+                total_donated += float(donation['amount'])
+
             return jsonify({
                 "donor": {"name": donor.name, "email": donor.email},
-                "donations": [],
-                "charities": [],
-                "total_donated": 0
+                "donations": donations_data,
+                "charities": [{"name": c[0], "mission": c[1]} for c in charities],
+                "total_donated": total_donated
             }), 200
 
-        donations_data = []
-        charities = set()
-        total_donated = 0
-
-        for donation in donations:
-            donation_date = donation['donation_date']
-            if donation_date and isinstance(donation_date, str):
-                donation_date = datetime.fromisoformat(donation_date)
-
-            donations_data.append({
-                "id": donation['id'],
-                "amount": float(donation['amount']),
-                "charity": donation['charity_name'],
-                "mission": donation['charity_mission'],
-                "date": donation_date.strftime('%Y-%m-%d') if donation_date else None,
-                "frequency": donation['frequency'],
-                "is_anonymous": donation['is_anonymous'],
-                "donor_name": donation['donor_name']
-            })
-            charities.add((donation['charity_name'], donation['charity_mission']))
-            total_donated += float(donation['amount'])
-
-        return jsonify({
-            "donor": {"name": donor.name, "email": donor.email},
-            "donations": donations_data,
-            "charities": [{"name": c[0], "mission": c[1]} for c in charities],
-            "total_donated": total_donated
-        }), 200
-
-    except Exception as e:
-        current_app.logger.error(f"CRITICAL Donor dashboard error: {str(e)}\n{traceback.format_exc()}")
-        return jsonify({"error": "Internal server error"}), 500
+        except Exception as e:
+            current_app.logger.error(f"CRITICAL Donor dashboard error: {str(e)}\n{traceback.format_exc()}")
+            return jsonify({"error": "Internal server error"}), 500
+    
+    return protected()
 
 @api.route("/donate", methods=["POST", "OPTIONS"])
-@jwt_required()
-@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
+@cross_origin(origins=["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"], supports_credentials=True)
 def donate():
     if request.method == "OPTIONS":
         return jsonify({}), 200
-    try:
-        current_user = get_jwt_identity()
-        if not current_user or current_user.get('role') != 'donor':
-            return jsonify({'error': 'Unauthorized'}), 401
-
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No data provided'}), 400
-
-        required_fields = ['charity_id', 'amount']
-        if not all(field in data for field in required_fields):
-            return jsonify({'error': 'Missing required fields'}), 400
-
+    
+    @jwt_required()
+    def protected():
         try:
-            charity_id = int(data['charity_id'])
-            amount = float(data['amount'])
-            frequency = data.get('frequency', 'one-time')
-            anonymous = bool(data.get('anonymous', False))
-            
-            if amount <= 0:
-                return jsonify({'error': 'Amount must be positive'}), 400
+            current_user = get_jwt_identity()
+            if not current_user or current_user.get('role') != 'donor':
+                return jsonify({'error': 'Unauthorized'}), 401
 
-            charity = Charity.query.get(charity_id)
-            if not charity:
-                return jsonify({'error': 'Charity not found'}), 404
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
 
-            donor = Donor.query.filter_by(email=current_user['email']).first()
-            if not donor:
-                return jsonify({'error': 'Donor not found'}), 404
+            required_fields = ['charity_id', 'amount']
+            if not all(field in data for field in required_fields):
+                return jsonify({'error': 'Missing required fields'}), 400
 
-            donation = Donation(
-                donor_id=donor.id,
-                charity_id=charity.id,
-                amount=amount,
-                frequency=frequency,
-                is_anonymous=anonymous,
-                donor_name='Anonymous' if anonymous else donor.name
-            )
+            try:
+                charity_id = int(data['charity_id'])
+                amount = float(data['amount'])
+                frequency = data.get('frequency', 'one-time')
+                anonymous = bool(data.get('anonymous', False))
+                
+                if amount <= 0:
+                    return jsonify({'error': 'Amount must be positive'}), 400
 
-            db.session.add(donation)
-            
-            if charity not in donor.charities:
-                donor.charities.append(charity)
+                charity = Charity.query.get(charity_id)
+                if not charity:
+                    return jsonify({'error': 'Charity not found'}), 404
 
-            db.session.commit()
+                donor = Donor.query.filter_by(email=current_user['email']).first()
+                if not donor:
+                    return jsonify({'error': 'Donor not found'}), 404
 
-            return jsonify({
-                'message': 'Donation successful',
-                'donation_id': donation.id
-            }), 201
+                donation = Donation(
+                    donor_id=donor.id,
+                    charity_id=charity.id,
+                    amount=amount,
+                    frequency=frequency,
+                    is_anonymous=anonymous,
+                    donor_name='Anonymous' if anonymous else donor.name
+                )
 
-        except ValueError:
-            return jsonify({'error': 'Invalid data format'}), 400
+                db.session.add(donation)
+                
+                if charity not in donor.charities:
+                    donor.charities.append(charity)
+
+                db.session.commit()
+
+                return jsonify({
+                    'message': 'Donation successful',
+                    'donation_id': donation.id
+                }), 201
+
+            except ValueError:
+                return jsonify({'error': 'Invalid data format'}), 400
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Donation error: {str(e)}\n{traceback.format_exc()}")
+                return jsonify({'error': str(e)}), 500
+
         except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Donation error: {str(e)}\n{traceback.format_exc()}")
-            return jsonify({'error': str(e)}), 500
-
-    except Exception as e:
-        current_app.logger.error(f"CRITICAL Donation error: {str(e)}\n{traceback.format_exc()}")
-        return jsonify({'error': 'Internal server error'}), 500
+            current_app.logger.error(f"CRITICAL Donation error: {str(e)}\n{traceback.format_exc()}")
+            return jsonify({'error': 'Internal server error'}), 500
+    
+    return protected()
 
 @api.route("/admin/charities", methods=["GET", "PUT", "OPTIONS"])
-@jwt_required()
-@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
+@cross_origin(origins=["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"], supports_credentials=True)
 def admin_charities():
     if request.method == "OPTIONS":
         return jsonify({}), 200
-    identity = get_jwt_identity()
-    if identity["role"] != "admin":
-        return jsonify({"error": "Unauthorized"}), 403
+    
+    @jwt_required()
+    def protected():
+        identity = get_jwt_identity()
+        if identity["role"] != "admin":
+            return jsonify({"error": "Unauthorized"}), 403
 
-    if request.method == "GET":
-        charities = Charity.query.all()
-        return jsonify([{
-            "id": c.id,
-            "name": c.name,
-            "email": c.email,
-            "status": c.status
-        } for c in charities]), 200
+        if request.method == "GET":
+            charities = Charity.query.all()
+            return jsonify([{
+                "id": c.id,
+                "name": c.name,
+                "email": c.email,
+                "status": c.status
+            } for c in charities]), 200
 
-    elif request.method == "PUT":
-        data = request.get_json()
-        charity_id = data.get("id")
-        status = data.get("status")
+        elif request.method == "PUT":
+            data = request.get_json()
+            charity_id = data.get("id")
+            status = data.get("status")
 
-        if not charity_id or not status:
-            return jsonify({"error": "Charity ID and status are required"}), 400
+            if not charity_id or not status:
+                return jsonify({"error": "Charity ID and status are required"}), 400
 
-        charity = Charity.query.get(charity_id)
-        if not charity:
-            return jsonify({"error": "Charity not found"}), 404
+            charity = Charity.query.get(charity_id)
+            if not charity:
+                return jsonify({"error": "Charity not found"}), 404
 
-        charity.status = status
-        db.session.commit()
-        return jsonify({"message": f"Charity status updated to {status}"}), 200
+            charity.status = status
+            db.session.commit()
+            return jsonify({"message": f"Charity status updated to {status}"}), 200
+    
+    return protected()
 
 @api.route("/stories", methods=["POST", "OPTIONS"])
-@jwt_required()
-@cross_origin(origins=["http://localhost:5173"], supports_credentials=True)
+@cross_origin(origins=["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"], supports_credentials=True)
 def create_story():
     if request.method == "OPTIONS":
         return jsonify({}), 200
-    identity = get_jwt_identity()
-    if identity["role"] != "charity":
-        return jsonify({"error": "Unauthorized"}), 403
+    
+    @jwt_required()
+    def protected():
+        identity = get_jwt_identity()
+        if identity["role"] != "charity":
+            return jsonify({"error": "Unauthorized"}), 403
 
-    charity = Charity.query.filter_by(email=identity["email"]).first()
-    if not charity or charity.status != "approved":
-        return jsonify({"error": "Charity not approved"}), 403
+        charity = Charity.query.filter_by(email=identity["email"]).first()
+        if not charity or charity.status != "approved":
+            return jsonify({"error": "Charity not approved"}), 403
 
-    title = request.form.get("title")
-    description = request.form.get("description")
-    image = request.files.get("image")
+        title = request.form.get("title")
+        description = request.form.get("description")
+        image = request.files.get("image")
 
-    if not all([title, description, image]):
-        return jsonify({"error": "All fields are required"}), 400
+        if not all([title, description, image]):
+            return jsonify({"error": "All fields are required"}), 400
 
-    filename = secure_filename(image.filename)
-    image_path = os.path.join("static/uploads", filename)
-    os.makedirs(os.path.dirname(image_path), exist_ok=True)
-    image.save(image_path)
+        filename = secure_filename(image.filename)
+        image_path = os.path.join("static/uploads", filename)
+        os.makedirs(os.path.dirname(image_path), exist_ok=True)
+        image.save(image_path)
 
-    new_story = Story(
-        title=title,
-        description=description,
-        image=f"/{image_path}",
-        charity_id=charity.id
-    )
-    db.session.add(new_story)
-    db.session.commit()
+        new_story = Story(
+            title=title,
+            description=description,
+            image=f"/{image_path}",
+            charity_id=charity.id
+        )
+        db.session.add(new_story)
+        db.session.commit()
 
-    return jsonify({"message": "Story created successfully"}), 201
+        return jsonify({"message": "Story created successfully"}), 201
+    
+    return protected()
 
 def init_routes(app):
     app.logger.info("Registering API Blueprint with /api prefix")
