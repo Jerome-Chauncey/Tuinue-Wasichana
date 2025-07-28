@@ -207,7 +207,7 @@ def donor_signup():
     return jsonify({"message": "Donor registered successfully"}), 201
 
 
-@api.route('/api/donor-dashboard', methods=['GET', 'OPTIONS'])
+@api.route('/donor-dashboard', methods=['GET', 'OPTIONS'])
 @jwt_required(optional=True)  # Allow OPTIONS without auth
 def donor_dashboard():
     if request.method == 'OPTIONS':

@@ -1,54 +1,47 @@
 import React, { useEffect, useState } from "react";
 import { Route, Routes, Link, useNavigate } from "react-router-dom";
 import "../css/DonorDashboard.css";
-import { API_BASE_URL } from "../config";
+import { API_BASE_URL } from '../config';
+
+
 
 const DonorDashboard = () => {
   const navigate = useNavigate();
   const [donor, setDonor] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchDonorData = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        navigate("/login");
-        return;
-      }
+useEffect(() => {
+  const fetchDonorData = async () => {
+    // Verify the URL is accessible
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/donor-dashboard`;
+    console.log("Fetching from:", apiUrl);
+    
+    try {
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        credentials: "include"
+      });
 
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/donor-dashboard`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            credentials: "include",
-            mode: "cors",
-          }
-        );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const data = await response.json();
+      setDonor(data);
+      
+    } catch (err) {
+      console.error("Fetch failed:", {
+        url: apiUrl,
+        error: err.message
+      });
+      setError("Failed to load data");
+    }
+  };
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem("token");
-            navigate("/login");
-            return;
-          }
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        setDonor(data);
-      } catch (error) {
-        console.error("Fetch error:", error);
-        setError(error.message || "Failed to load donor data");
-      }
-    };
-
-    fetchDonorData();
-  }, [navigate]);
+  fetchDonorData();
+}, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -547,60 +540,54 @@ const DonorDashboard = () => {
                       </p>
                     </div>
                   </div>
-                  {donor.stories && donor.stories.length > 0 ? (
-                    donor.stories.map((story, index) => (
-                      <div key={index} className="p-4">
-                        <div className="flex items-stretch justify-between gap-4 rounded-xl">
-                          <div className="flex flex-col gap-1 flex-[2_2_0px]">
-                            <p className="text-[#101618] text-base font-bold leading-tight">
-                              {story.title || "Untitled Story"}
-                            </p>
-                            <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
-                              {story.description || "No description available"}
-                            </p>
-                          </div>
-                          <div
-                            className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex-1"
-                            style={{
-                              backgroundImage: `url("${
-                                story.image || "https://via.placeholder.com/300"
-                              }")`,
-                            }}
-                          ></div>
+                  {donor.stories.map((story, index) => (
+                    <div key={index} className="p-4">
+                      <div className="flex items-stretch justify-between gap-4 rounded-xl">
+                        <div className="flex flex-col gap-1 flex-[2_2_0px]">
+                          <p className="text-[#101618] text-base font-bold leading-tight">
+                            {story.title}
+                          </p>
+                          <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
+                            {story.description}
+                          </p>
                         </div>
-                        <div className="p-4 grid grid-cols-[20%_1fr] gap-x-6">
-                          <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
-                            <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
-                              Charity
-                            </p>
-                            <p className="text-[#101618] text-sm font-normal leading-normal">
-                              {story.charity || "Unknown Charity"}
-                            </p>
-                          </div>
-                          <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
-                            <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
-                              Beneficiary
-                            </p>
-                            <p className="text-[#101618] text-sm font-normal leading-normal">
-                              {story.beneficiary || "Unknown Beneficiary"}
-                            </p>
-                          </div>
-                          <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
-                            <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
-                              Inventory Sent
-                            </p>
-                            <p className="text-[#101618] text-sm font-normal leading-normal">
-                              {story.inventory || "No inventory information"}
-                            </p>
-                          </div>
+                        <div
+                          className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex-1"
+                          style={{
+                            backgroundImage: `url("${
+                              story.image || "https://via.placeholder.com/300"
+                            }")`,
+                          }}
+                        ></div>
+                      </div>
+                      <div className="p-4 grid grid-cols-[20%_1fr] gap-x-6">
+                        <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
+                          <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
+                            Charity
+                          </p>
+                          <p className="text-[#101618] text-sm font-normal leading-normal">
+                            {story.charity}
+                          </p>
+                        </div>
+                        <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
+                          <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
+                            Beneficiary
+                          </p>
+                          <p className="text-[#101618] text-sm font-normal leading-normal">
+                            {story.beneficiary}
+                          </p>
+                        </div>
+                        <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
+                          <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
+                            Inventory Sent
+                          </p>
+                          <p className="text-[#101618] text-sm font-normal leading-normal">
+                            {story.inventory}
+                          </p>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-gray-500">
-                      No impact stories available
                     </div>
-                  )}
+                  ))}
                 </div>
               }
             />
