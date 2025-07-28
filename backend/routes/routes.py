@@ -278,7 +278,7 @@ def donor_dashboard():
 
 
 
-@api.route('/api/donate', methods=['POST', 'OPTIONS'])
+@api.route('/donate', methods=['POST', 'OPTIONS'])
 @jwt_required(optional=True)  
 def donate():
     # Handle preflight request

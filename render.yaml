@@ -17,6 +17,9 @@ services:
       pip install --upgrade pip
       pip install python-dotenv gunicorn
       pip install -r requirements.txt
+
+      echo "Contents of routes.py:"
+      cat backend/routes/routes.py
       
       # Set Flask app environment variable
       export FLASK_APP=backend.config:create_app
