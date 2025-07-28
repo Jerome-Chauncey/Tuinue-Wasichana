@@ -290,6 +290,67 @@ def donor_dashboard():
             "error": "Internal server error",
             "details": "Please contact support"
         }), 500
+    
+
+
+@api.route("/donate", methods=["POST", "OPTIONS"])
+@jwt_required(optional=True) 
+@cross_origin()
+def donate():
+    try:
+        identity = get_jwt_identity()
+
+        if identity["role"] != "donor":
+            return jsonify({"error": "Only donors can make donations"}), 403
+
+        donor = Donor.query.filter_by(email=identity["email"]).first()
+        if not donor:
+            return jsonify({"error": "Donor not found"}), 404
+
+        data = request.get_json()
+
+        charity_id = data.get("charity_id")
+        amount = data.get("amount")
+        frequency = data.get("frequency", "one-time")
+        anonymous = data.get("anonymous", False)
+
+        if not charity_id or not amount:
+            return jsonify({"error": "Charity ID and amount are required"}), 400
+
+        try:
+            amount = float(amount)
+            if amount <= 0:
+                return jsonify({"error": "Amount must be greater than zero"}), 400
+        except ValueError:
+            return jsonify({"error": "Invalid amount value"}), 400
+
+        charity = Charity.query.get(charity_id)
+        if not charity or charity.status not in ["approved", "Active"]:
+            return jsonify({"error": "Charity not found or not approved"}), 404
+
+        donation = Donation(
+            donor_id=donor.id,
+            charity_id=charity.id,
+            amount=amount,
+            frequency=frequency,
+            is_anonymous=anonymous,
+            donor_name=donor.name if not anonymous else "Anonymous"
+        )
+
+        db.session.add(donation)
+
+        
+        if charity not in donor.charities:
+            donor.charities.append(charity)
+
+        db.session.commit()
+
+        return jsonify({"message": "Donation successful"}), 201
+
+    except Exception as e:
+        current_app.logger.error(f"Donation error: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({"error": "Internal server error"}), 500
+
 
 
 

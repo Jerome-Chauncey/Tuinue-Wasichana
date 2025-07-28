@@ -30,7 +30,7 @@ def create_app():
         origins=["http://localhost:5173","https://tuinue-wasichana-ui-dw85.onrender.com" ],
         supports_credentials=True,  
         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization"],
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
         expose_headers=["Content-Type"],
         max_age=600)
 
