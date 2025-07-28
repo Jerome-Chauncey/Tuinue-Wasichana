@@ -3,45 +3,51 @@ import { Route, Routes, Link, useNavigate } from "react-router-dom";
 import "../css/DonorDashboard.css";
 import { API_BASE_URL } from '../config';
 
-
 const DonorDashboard = () => {
   const navigate = useNavigate();
   const [donor, setDonor] = useState(null);
   const [error, setError] = useState(null);
 
-useEffect(() => {
-  const fetchDonorData = async () => {
-    const token = localStorage.getItem("token"); // Get token from storage
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/donor-dashboard`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` 
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token expired or invalid
-          localStorage.removeItem("token");
-          localStorage.removeItem("role");
-          navigate("/login");
-          return;
-        }
-        throw new Error("Failed to fetch donor data");
+  useEffect(() => {
+    const fetchDonorData = async () => {
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        navigate("/login");
+        return;
       }
 
-      const data = await response.json();
-      setDonor(data);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/donor-dashboard`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          credentials: "include" // Ensure cookies are sent if needed
+        });
 
-  fetchDonorData();
-}, [navigate]);
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("role");
+            navigate("/login");
+            return;
+          }
+          throw new Error(`Failed to fetch donor data: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log("Donor data:", data); // Debug response
+        setDonor(data);
+      } catch (err) {
+        console.error("Fetch error:", err);
+        setError(err.message);
+      }
+    };
+
+    fetchDonorData();
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -80,21 +86,17 @@ useEffect(() => {
   if (!donor) return null;
 
   // Calculate donation metrics
-  const oneTimeDonations = donor.donations
-    .filter((d) => d.donationType === "one-time")
-    .map((d) => ({
-      charity: d.charity,
-      amount: d.amount,
-      date: d.date,
-    }));
-  const recurringDonations = donor.donations
-    .filter((d) => d.donationType === "recurring")
-    .map((d) => ({
-      charity: d.charity,
-      amount: d.amount,
-      startDate: d.start_date,
-      billingDate: d.billing_date,
-    }));
+  const oneTimeDonations = (donor.donations || []).filter((d) => d.frequency === "one-time").map((d) => ({
+    charity: d.charity,
+    amount: `$${d.amount.toFixed(2)}`,
+    date: d.date
+  }));
+  const recurringDonations = (donor.donations || []).filter((d) => d.frequency !== "one-time").map((d) => ({
+    charity: d.charity,
+    amount: `$${d.amount.toFixed(2)}`,
+    startDate: d.date, // Adjust based on backend response
+    billingDate: d.date // Adjust if backend provides billing date
+  }));
   const totalDonations = oneTimeDonations.reduce(
     (sum, d) => sum + parseFloat(d.amount.replace("$", "")),
     0
@@ -103,7 +105,7 @@ useEffect(() => {
     (sum, d) => sum + parseFloat(d.amount.replace("$", "")),
     0
   );
-  const uniqueCharities = new Set(donor.charities.map((c) => c.name)).size;
+  const uniqueCharities = new Set((donor.charities || []).map((c) => c.name)).size;
 
   return (
     <div
@@ -124,7 +126,7 @@ useEffect(() => {
               <div className="flex flex-col gap-4">
                 <div className="flex gap-3">
                   <h1 className="text-[#101618] text-base font-medium leading-normal">
-                    {donor.name}
+                    {donor.donor?.name || "Donor"}
                   </h1>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -193,7 +195,7 @@ useEffect(() => {
                         fill="currentColor"
                         viewBox="0 0 256 256"
                       >
-                        <path d="M117.25,157.92a60,60,0,1,0-66.50,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z" />
+                        <path d="M117.25,157.92a60,60,0,1,0-66.50,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,0,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z" />
                       </svg>
                     </div>
                     <p className="text-[#101618] text-sm font-medium leading-normal">
@@ -316,22 +318,30 @@ useEffect(() => {
                           </tr>
                         </thead>
                         <tbody>
-                          {oneTimeDonations.map((donation, index) => (
-                            <tr
-                              key={index}
-                              className="border-t border-t-[#d4dfe2]"
-                            >
-                              <td className="table-Donor-One-Time-Donations-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
-                                {donation.charity}
-                              </td>
-                              <td className="table-Donor-One-Time-Donations-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.amount}
-                              </td>
-                              <td className="table-Donor-One-Time-Donations-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.date}
+                          {oneTimeDonations.length > 0 ? (
+                            oneTimeDonations.map((donation, index) => (
+                              <tr
+                                key={index}
+                                className="border-t border-t-[#d4dfe2]"
+                              >
+                                <td className="table-Donor-One-Time-Donations-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
+                                  {donation.charity}
+                                </td>
+                                <td className="table-Donor-One-Time-Donations-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                  {donation.amount}
+                                </td>
+                                <td className="table-Donor-One-Time-Donations-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                  {donation.date}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="3" className="text-center py-4 text-[#5c7e8a]">
+                                No one-time donations yet.
                               </td>
                             </tr>
-                          ))}
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -359,25 +369,33 @@ useEffect(() => {
                           </tr>
                         </thead>
                         <tbody>
-                          {recurringDonations.map((donation, index) => (
-                            <tr
-                              key={index}
-                              className="border-t border-t-[#d4dfe2]"
-                            >
-                              <td className="table-Donor-Recurring-Donations-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
-                                {donation.charity}
-                              </td>
-                              <td className="table-Donor-Recurring-Donations-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.amount}
-                              </td>
-                              <td className="table-Donor-Recurring-Donations-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.startDate}
-                              </td>
-                              <td className="table-Donor-Recurring-Donations-column-600 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.billingDate}
+                          {recurringDonations.length > 0 ? (
+                            recurringDonations.map((donation, index) => (
+                              <tr
+                                key={index}
+                                className="border-t border-t-[#d4dfe2]"
+                              >
+                                <td className="table-Donor-Recurring-Donations-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
+                                  {donation.charity}
+                                </td>
+                                <td className="table-Donor-Recurring-Donations-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                  {donation.amount}
+                                </td>
+                                <td className="table-Donor-Recurring-Donations-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                  {donation.startDate}
+                                </td>
+                                <td className="table-Donor-Recurring-Donations-column-600 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                  {donation.billingDate}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="4" className="text-center py-4 text-[#5c7e8a]">
+                                No recurring donations yet.
                               </td>
                             </tr>
-                          ))}
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -408,28 +426,36 @@ useEffect(() => {
                             <th className="table-Donor-One-Time-Donations-column-360 px-4 py-3 text-left text-[#101618] w-[400px] text-sm font-medium leading-normal">
                               Amount
                             </th>
-                            <th className="table-Donor-One-Time-Donations-column-480 px-4 py-3 text-left text-[#101618] w-[400px] text-sm font-medium leading-normal">
+                            <th className="table-Donor-One-Time-Donations-column-64px px-auto4 py-3 text-right text-[#101618]" w-auto text-sm="text-sm font-medium" leading-normal="leading-normal">
                               Date
                             </th>
                           </tr>
                         </thead>
                         <tbody>
-                          {oneTimeDonations.map((donation, index) => (
-                            <tr
-                              key={index}
-                              className="border-t border-t-[#d4dfe2]"
-                            >
-                              <td className="table-Donor-One-Time-Donations-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
-                                {donation.charity}
-                              </td>
-                              <td className="table-Donor-One-Time-Donations-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.amount}
-                              </td>
-                              <td className="table-Donor-One-Time-Donations-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.date}
+                          {oneTimeDonations.length > 0 ? (
+                            oneTimeDonations.map((donation, index) => (
+                              <tr
+                                key={index}
+                                className="border-t border-t-[#d4dfe2]"
+                              >
+                                <td className="table-Donor-One-Time-Donations-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
+                                  {donation.charity}
+                                </td>
+                                <td className="table-Donation-One-Time-Donations-column-364 px-12 py-3 h-[72px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                  {donation.amount}
+                                </td>
+                                <td className="table-Donor-One-Time-Donations-column-48 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                  {donation.date}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="3" className="text-center py-4 text-[#5c7e8a]">
+                                No one-time donations yet.
                               </td>
                             </tr>
-                          ))}
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -457,25 +483,33 @@ useEffect(() => {
                           </tr>
                         </thead>
                         <tbody>
-                          {recurringDonations.map((donation, index) => (
-                            <tr
-                              key={index}
-                              className="border-t border-t-[#d4dfe2]"
-                            >
-                              <td className="table-Donor-Recurring-Donations-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
-                                {donation.charity}
-                              </td>
-                              <td className="table-Donor-Recurring-Donations-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.amount}
-                              </td>
-                              <td className="table-Donor-Recurring-Donations-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.startDate}
-                              </td>
-                              <td className="table-Donor-Recurring-Donations-column-600 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {donation.billingDate}
+                          {recurringDonations.length > 0 ? (
+                            recurringDonations.map((donation, index) => (
+                              <tr
+                                key={index}
+                                className="border-t border-t-[#d4dfe2]"
+                              >
+                                <td className="table-Donor-Recurring-Donations-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
+                                  {donation.charity}
+                                </td>
+                                <td className="table-Donor-Recurring-Donations-column-360 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                  {donation.amount}
+                                </td>
+                                <td className="table-Donor-Recurring-Donations-column-480 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                  {donation.startDate}
+                                </td>
+                                <td className="table-Donor-Recurring-Donations-column-600 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                  {donation.billingDate}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="4" className="text-center py-4 text-[#5c7e8a]">
+                                No recurring donations yet.
                               </td>
                             </tr>
-                          ))}
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -506,19 +540,27 @@ useEffect(() => {
                           </tr>
                         </thead>
                         <tbody>
-                          {donor.charities.map((charity, index) => (
-                            <tr
-                              key={index}
-                              className="border-t border-t-[#d4dfe2]"
-                            >
-                              <td className="table-Donor-Charities-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
-                                {charity.name}
-                              </td>
-                              <td className="table-Donor-Charities-column-240 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
-                                {charity.mission}
+                          {(donor.charities || []).length > 0 ? (
+                            donor.charities.map((charity, index) => (
+                              <tr
+                                key={index}
+                                className="border-t border-t-[#d4dfe2]"
+                              >
+                                <td className="table-Donor-Charities-column-120 h-[72px] px-4 py-2 w-[400px] text-[#101618] text-sm font-normal leading-normal">
+                                  {charity.name}
+                                </td>
+                                <td className="table-Donor-Charities-column-240 h-[72px] px-4 py-2 w-[400px] text-[#5c7e8a] text-sm font-normal leading-normal">
+                                  {charity.mission}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="2" className="text-center py-4 text-[#5c7e8a]">
+                                No charities supported yet.
                               </td>
                             </tr>
-                          ))}
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -540,54 +582,62 @@ useEffect(() => {
                       </p>
                     </div>
                   </div>
-                  {donor.stories.map((story, index) => (
-                    <div key={index} className="p-4">
-                      <div className="flex items-stretch justify-between gap-4 rounded-xl">
-                        <div className="flex flex-col gap-1 flex-[2_2_0px]">
-                          <p className="text-[#101618] text-base font-bold leading-tight">
-                            {story.title}
-                          </p>
-                          <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
-                            {story.description}
-                          </p>
+                  {(donor.stories || []).length > 0 ? (
+                    donor.stories.map((story, index) => (
+                      <div key={index} className="p-4">
+                        <div className="flex items-stretch justify-between gap-4 rounded-xl">
+                          <div className="flex flex-col gap-1 flex-[2_2_0px]">
+                            <p className="text-[#101618] text-base font-bold leading-tight">
+                              {story.title}
+                            </p>
+                            <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
+                              {story.description}
+                            </p>
+                          </div>
+                          <div
+                            className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex-1"
+                            style={{
+                              backgroundImage: `url("${
+                                story.image || "https://via.placeholder.com/300"
+                              }")`
+                            }}
+                          ></div>
                         </div>
-                        <div
-                          className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl flex-1"
-                          style={{
-                            backgroundImage: `url("${
-                              story.image || "https://via.placeholder.com/300"
-                            }")`,
-                          }}
-                        ></div>
+                        <div className="p-4 grid grid-cols-[20%_1fr] gap-x-6">
+                          <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
+                            <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
+                              Charity
+                            </p>
+                            <p className="text-[#101618] text-sm font-normal leading-normal">
+                              {story.charity}
+                            </p>
+                          </div>
+                          <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
+                            <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
+                              Beneficiary
+                            </p>
+                            <p className="text-[#101618] text-sm font-normal leading-normal">
+                              {story.beneficiary}
+                            </p>
+                          </div>
+                          <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
+                            <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
+                              Inventory Sent
+                            </p>
+                            <p className="text-[#101618] text-sm font-normal leading-normal">
+                              {story.inventory}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="p-4 grid grid-cols-[20%_1fr] gap-x-6">
-                        <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
-                          <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
-                            Charity
-                          </p>
-                          <p className="text-[#101618] text-sm font-normal leading-normal">
-                            {story.charity}
-                          </p>
-                        </div>
-                        <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
-                          <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
-                            Beneficiary
-                          </p>
-                          <p className="text-[#101618] text-sm font-normal leading-normal">
-                            {story.beneficiary}
-                          </p>
-                        </div>
-                        <div className="col-span-2 grid grid-cols-subgrid border-t border-t-[#d4dfe2] py-5">
-                          <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
-                            Inventory Sent
-                          </p>
-                          <p className="text-[#101618] text-sm font-normal leading-normal">
-                            {story.inventory}
-                          </p>
-                        </div>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4">
+                      <p className="text-[#5c7e8a] text-sm font-normal leading-normal">
+                        No impact stories available yet.
+                      </p>
                     </div>
-                  ))}
+                  )}
                 </div>
               }
             />
