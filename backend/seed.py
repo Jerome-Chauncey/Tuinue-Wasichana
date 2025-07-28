@@ -1,162 +1,104 @@
-from backend.models import db
-from backend.models.user import User
-from backend.models.charity import Charity
-from backend.models.schedule import Schedule
-from backend.models.donation import Donation
-from backend.models.story import Story
-from backend.models.beneficiary import Beneficiary
-from flask import Flask
-from backend.app import app  # assumes app is initialized in backend/app.py
-from werkzeug.security import generate_password_hash
-from datetime import datetime, timedelta
+from backend.models import db, Charity, Admin, Inventory, Donation, Story, Donor
+from backend.app import app  
+from faker import Faker
+import random
+from datetime import datetime
 
-with app.app_context():
-    print("Dropping and creating all tables...")
-    db.drop_all()
-    db.create_all()
+fake = Faker()
 
-    # Users
-    print("Creating users...")
-    admin = User(
-    full_name="Admin", 
-    email="admin@tuinue.org", 
-    role ="admin",
-    password_hash=generate_password_hash("adminpass"))
-
-    donor1 = User(
-    full_name="Alice Wanjiku", 
-    email="alice@example.com",
-    role="donor", 
-    password_hash=generate_password_hash("donorpass1"))
-
-    donor2 = User(
-    full_name="John Otieno", 
-    email="john@example.com",
-    role="donor", 
-    password_hash=generate_password_hash("donorpass2"))
+def seed_database():
+    print("Seeding database...")
     
-    charity_user1 = User(
-    full_name="Pads Org",
-    email="pads@example.com",
-    role="charity",
-    password_hash=generate_password_hash("charitypass1"))
+    with app.app_context():
+        if app.config.get('ENV') == 'development':
+            db.session.query(Story).delete()
+            db.session.query(Donation).delete()
+            db.session.query(Inventory).delete()
+            db.session.query(Admin).delete()
+            db.session.query(Donor).delete()
+            db.session.query(Charity).delete()
+            db.session.commit()
 
-    charity_user2 = User(
-    full_name="Dada Org",
-    email="dadacare@example.com",
-    role="charity",
-    password_hash=generate_password_hash("charitypass2"))
+        if Charity.query.count() == 0:
+            charities = [
+                Charity(
+                    name="Tuinue Wasichana Initiative",
+                    email="info@tuinuewasichana.org",
+                    location="Nairobi, Kenya",
+                    mission="Empowering girls through menstrual hygiene support and education.",
+                    status="Active"
+                ),
+                Charity(
+                    name="Pads for Progress",
+                    email="pads@progress.org",
+                    location="Mombasa, Kenya",
+                    mission="Providing access to menstrual products for underprivileged girls.",
+                    status="Active"
+                )
+            ]
+            for charity in charities:
+                charity.set_password("securepassword123")
+                db.session.add(charity)
+            db.session.commit()
 
-    db.session.add_all([admin, donor1, donor2, charity_user1, charity_user2])
-    db.session.commit()
+        if Admin.query.count() == 0:
+            admin = Admin(
+                username="admin1",
+                email="admin@tuinue.org"
+            )
+            admin.set_password("adminpass123")
+            db.session.add(admin)
+            db.session.commit()
 
-    # Charities
-    print("Creating charities...")
-    charity1 = Charity(
-    user_id=charity_user1.id,
-    name="Pads for Hope",
-    description="Providing pads to girls in rural areas",
-    email="pads@example.com",
-    approved=True
-    )
+        if Inventory.query.count() == 0:
+            inventory_items = ["Sanitary Pads", "Soap", "Toothpaste", "Toothbrush", "Tissue", "Underwear"]
+            charity_ids = [c.id for c in Charity.query.all()]
+            for _ in range(10):
+                db.session.add(Inventory(
+                    name=random.choice(inventory_items),
+                    quantity=random.randint(10, 100),
+                    description=fake.sentence(),
+                    charity_id=random.choice(charity_ids)
+                ))
 
-    charity2 = Charity(
-    user_id=charity_user2.id,
-    name="Dada Care",
-    description="Support menstrual health & education",
-    email="dadacare@example.com",
-    approved=True
-    )
+        if Donor.query.count() == 0:
+            for _ in range(5):
+                db.session.add(Donor(
+                    name=fake.name(),
+                    email=fake.email()
+                ))
 
-    db.session.add_all([charity1, charity2])
-    db.session.commit()
+        if Donation.query.count() == 0:
+            charity_ids = [c.id for c in Charity.query.all()]
+            frequency_options = ['one-time', 'monthly', 'quarterly', 'annual']
+            
+            for _ in range(10):
+                db.session.add(Donation(
+                    amount=random.randint(500, 5000),
+                    donor_name=fake.name(),
+                    message=fake.sentence(),
+                    frequency=random.choice(frequency_options),
+                    is_anonymous=random.choice([True, False]),
+                    charity_id=random.choice(charity_ids),
+                    created_at=datetime.utcnow()
+                ))
 
-    # Schedules
-    print("Creating donation schedules...")
-    schedule1 = Schedule(
-    user_id=donor1.id,
-    charity_id=charity1.id,
-    amount=500.00,
-    interval_days=30,
-    next_donation=datetime.utcnow() + timedelta(days=30)
-    )
+        if Story.query.count() == 0:
+            charity_ids = [c.id for c in Charity.query.all()]
+            for _ in range(5):
+                db.session.add(Story(
+                    title=fake.sentence(nb_words=6),
+                    content=fake.paragraph(nb_sentences=5),
+                    charity_id=random.choice(charity_ids)
+                ))
 
-    schedule2 = Schedule(
-    user_id=donor2.id,
-    charity_id=charity2.id,
-    amount=1000.00,
-    interval_days=30,
-    next_donation=datetime.utcnow() + timedelta(days=30)
-    )
+        try:
+            db.session.commit()
+            print("Database seeded successfully!")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error seeding database: {str(e)}")
+            raise
 
-    db.session.add_all([schedule1, schedule2])
-    db.session.commit()
-
-    # Donations
-    print("Creating donations...")
-    donation1 = Donation(
-    user_id=donor1.id,
-    charity_id=charity1.id,
-    amount=500.00,
-    is_recurring=True,
-    is_anonymous=False,
-    payment_method="stripe",
-    transaction_id="txn_001"
-    )
-
-    donation2 = Donation(
-    user_id=donor2.id,
-    charity_id=charity2.id,
-    amount=1000.00,
-    is_recurring=False,
-    is_anonymous=True,
-    payment_method="paypal",
-    transaction_id="txn_002"
-    )
-
-    db.session.add_all([donation1, donation2])
-    db.session.commit()
-
-
-    # Stories
-    print("Creating stories...")
-    story1 = Story(
-    charity_id=charity1.id,
-    title="Mary's Story",
-    content="Mary was able to stay in school after receiving pads.",
-    image_url="https://www.shutterstock.com/image-photo/abuja-nigeria-june-12-2023-600nw-2320804005.jpg"
-    )
-
-    story2 = Story(
-    charity_id=charity2.id,
-    title="Empowered Girls",
-    content="We reached 300 girls in Kisii County.",
-    image_url="https://www.shutterstock.com/image-photo/close-portrait-smiling-group-adolescent-600nw-2439214941.jpg"
-    )
-
-    db.session.add_all([story1, story2])
-    db.session.commit()
-
-
-    # Beneficiaries
-    print("Creating beneficiaries...")
-
-    b1 = Beneficiary(
-    charity_id=charity1.id,
-    name="Mary Achieng",
-    school="Kisumu Girls",
-    supplies_received="Sanitary towels x10"
-    )
-
-    b2 = Beneficiary(
-    charity_id=charity2.id,
-    name="Faith Wambui",
-    school="Nyeri High",
-    supplies_received="Pads, soap, wipes"
-    )
-
-    db.session.add_all([b1, b2])
-    db.session.commit()
-
-
-    print("✅ Done seeding!")
+if __name__ == "__main__":
+    seed_database()

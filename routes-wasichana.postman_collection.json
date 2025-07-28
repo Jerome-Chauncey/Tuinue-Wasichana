@@ -1,0 +1,211 @@
+{
+  "info": {
+    "name": "Charity API Collection",
+    "_postman_id": "a1e19a7c-7b9f-4cc4-a1e3-0a5a3f8c8e7d",
+    "description": "Test collection for Charity API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://tuinue-wasichana-api-7xi6.onrender.com/api" },
+    { "key": "token", "value": "" },
+    { "key": "charityId", "value": "" },
+    { "key": "donorId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Charity Signup",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test Charity\",\n  \"email\": \"charity@example.com\",\n  \"password\": \"password123\",\n  \"mission\": \"Helping communities\",\n  \"location\": \"Nairobi\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/charity-signup"
+      },
+      "response": []
+    },
+    {
+      "name": "Charity Login",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"charity@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"charity\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const jsonData = pm.response.json();",
+              "pm.environment.set(\"token\", jsonData.token);",
+              "console.log(\"Token set in environment variable.\");"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Get Charity Status",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": "{{baseUrl}}/charity/status"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Charity Dashboard",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": "{{baseUrl}}/charity/dashboard"
+      },
+      "response": []
+    },
+    {
+      "name": "Donor Signup",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test Donor\",\n  \"email\": \"donor@example.com\",\n  \"password\": \"password123\",\n  \"anonymous\": false\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/donor-signup"
+      },
+      "response": []
+    },
+    {
+      "name": "Donor Login",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"donor@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"donor\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const jsonData = pm.response.json();",
+              "pm.environment.set(\"token\", jsonData.token);",
+              "console.log(\"Token set in environment variable.\");"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Get Donor Dashboard",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": "{{baseUrl}}/donor-dashboard"
+      },
+      "response": []
+    },
+    {
+      "name": "Create Donation",
+      "request": {
+        "method": "POST",
+        "header": [ 
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"charity_id\": 1,\n  \"amount\": 1000,\n  \"frequency\": \"one-time\",\n  \"anonymous\": false\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/donate"
+      },
+      "response": []
+    },
+    {
+      "name": "Admin Login",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"admin\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const jsonData = pm.response.json();",
+              "pm.environment.set(\"token\", jsonData.token);",
+              "console.log(\"Admin token set in environment variable.\");"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Get All Charities (Admin)",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": "{{baseUrl}}/admin/charities"
+      },
+      "response": []
+    },
+    {
+      "name": "Update Charity Status (Admin)",
+      "request": {
+        "method": "PUT",
+        "header": [ 
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": 1,\n  \"status\": \"approved\"\n}"
+        },
+        "url": "{{baseUrl}}/admin/charities"
+      },
+      "response": []
+    },
+    {
+      "name": "Create Story (Charity)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "title", "value": "Our Impact Storyy", "type": "text" },
+            { "key": "description", "value": "We have helped 100 families.", "type": "text" },
+            { "key": "image", "type": "file", "src": "/path/to/your/image.jpg" }
+          ]
+        },
+        "url": "{{baseUrl}}/stories"
+      },
+      "response": []
+    }
+  ]
+}

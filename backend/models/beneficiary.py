@@ -1,12 +1,17 @@
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
 from backend.config import db
-from datetime import datetime
-
 
 class Beneficiary(db.Model):
     __tablename__ = 'beneficiaries'
-    id = db.Column(db.Integer, primary_key=True)
-    charity_id = db.Column(db.Integer, db.ForeignKey('charities.id'))
-    name = db.Column(db.String(120))
-    school = db.Column(db.String(120))
-    supplies_received = db.Column(db.Text)  # e.g. sanitary towels, water
-    received_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    id = db.Column(Integer, primary_key=True)
+    name = db.Column(String, nullable=False)
+    charity_id = db.Column(Integer, ForeignKey('charities.id'), nullable=False)
+
+    charity = db.relationship('Charity', back_populates='beneficiaries')
+    stories = db.relationship('Story', back_populates='beneficiary', cascade='all, delete-orphan')
+    inventory_items = db.relationship('Inventory', back_populates='beneficiary', cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f"<Beneficiary {self.name}>"

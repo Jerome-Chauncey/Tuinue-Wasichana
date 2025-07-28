@@ -1,0 +1,303 @@
+.relative {
+  position: relative;
+}
+.flex {
+  display: flex;
+}
+.size-full {
+  width: 100%;
+  height: 100%;
+}
+.min-h-screen {
+  min-height: 100vh;
+}
+.flex-col {
+  flex-direction: column;
+}
+.bg-gray-50 {
+  background-color: #f9fafb;
+}
+.group\/design-root {
+  font-family: Lexend, "Noto Sans", sans-serif;
+}
+.overflow-x-hidden {
+  overflow-x: hidden;
+}
+.layout-container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+.grow {
+  flex-grow: 1;
+}
+.items-center {
+  align-items: center;
+}
+.justify-between {
+  justify-content: space-between;
+}
+.whitespace-nowrap {
+  white-space: nowrap;
+}
+.border-b {
+  border-bottom: 1px solid;
+}
+.border-solid {
+  border-style: solid;
+}
+.border-b-\[\#eaeff1\] {
+  border-bottom-color: #eaeff1;
+}
+.px-10 {
+  padding-left: 2.5rem;
+  padding-right: 2.5rem;
+}
+.py-3 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+.gap-4 {
+  gap: 1rem;
+}
+.text-\[\#101618\] {
+  color: #101618;
+}
+.text-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+.font-bold {
+  font-weight: 700;
+}
+.leading-tight {
+  line-height: 1.25;
+}
+.tracking-\[-0\.015em\] {
+  letter-spacing: -0.015em;
+}
+.gap-1 {
+  gap: 0.25rem;
+}
+.px-6 {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+.flex-1 {
+  flex: 1 1 0%;
+}
+.justify-center {
+  justify-content: center;
+}
+.py-5 {
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+}
+.layout-content-container {
+  width: 100%;
+  max-width: 960px;
+}
+.w-80 {
+  width: 20rem;
+}
+.min-h-\[700px\] {
+  min-height: 700px;
+}
+.p-4 {
+  padding: 1rem;
+}
+.text-base {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+.font-medium {
+  font-weight: 500;
+}
+.leading-normal {
+  line-height: 1.5;
+}
+.gap-2 {
+  gap: 0.5rem;
+}
+.px-3 {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+.rounded-full {
+  border-radius: 9999px;
+}
+.bg-\[\#eaeff1\] {
+  background-color: #eaeff1;
+}
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+.min-w-\[84px\] {
+  min-width: 84px;
+}
+.max-w-\[480px\] {
+  max-width: 480px;
+}
+.cursor-pointer {
+  cursor: pointer;
+}
+.overflow-hidden {
+  overflow: hidden;
+}
+.h-10 {
+  height: 2.5rem;
+}
+.bg-\[\#3f9fbf\] {
+  background-color: #3f9fbf;
+}
+.tracking-\[0\.015em\] {
+  letter-spacing: 0.015em;
+}
+.flex-wrap {
+  flex-wrap: wrap;
+}
+.text-\[32px\] {
+  font-size: 32px;
+}
+.min-w-72 {
+  min-width: 18rem;
+}
+.min-w-\[158px\] {
+  min-width: 158px;
+}
+.rounded-xl {
+  border-radius: 0.75rem;
+}
+.p-6 {
+  padding: 1.5rem;
+}
+.text-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+.text-\[22px\] {
+  font-size: 22px;
+}
+.pb-3 {
+  padding-bottom: 0.75rem;
+}
+.pt-5 {
+  padding-top: 1.25rem;
+}
+.border {
+  border-width: 1px;
+}
+.border-\[\#d4dfe2\] {
+  border-color: #d4dfe2;
+}
+.text-left {
+  text-align: left;
+}
+.w-\[400px\] {
+  width: 400px;
+}
+.border-t {
+  border-top: 1px solid;
+}
+.border-t-\[\#d4dfe2\] {
+  border-top-color: #d4dfe2;
+}
+.h-\[72px\] {
+  height: 72px;
+}
+.text-\[\#5c7e8a\] {
+  color: #5c7e8a;
+}
+.font-normal {
+  font-weight: 400;
+}
+.grid {
+  display: grid;
+}
+.grid-cols-\[20\%_1fr\] {
+  grid-template-columns: 20% 1fr;
+}
+.gap-x-6 {
+  column-gap: 1.5rem;
+}
+.col-span-2 {
+  grid-column: span 2 / span 2;
+}
+.grid-cols-subgrid {
+  grid-template-columns: subgrid;
+}
+.items-stretch {
+  align-items: stretch;
+}
+.flex-\[2_2_0px\] {
+  flex: 2 2 0px;
+}
+.aspect-video {
+  aspect-ratio: 16 / 9;
+}
+.bg-cover {
+  background-size: cover;
+}
+.bg-center {
+  background-position: center;
+}
+.bg-no-repeat {
+  background-repeat: no-repeat;
+}
+@container (max-width:120px) {
+  .table-Dashboard-One-Time-Donations-column-120 {
+    display: none;
+  }
+  .table-Dashboard-Recurring-Donations-column-120 {
+    display: none;
+  }
+  .table-Beneficiaries-column-120 {
+    display: none;
+  }
+  .table-Inventory-Sent-column-120 {
+    display: none;
+  }
+}
+@container (max-width:240px) {
+  .table-Dashboard-One-Time-Donations-column-240 {
+    display: none;
+  }
+  .table-Dashboard-Recurring-Donations-column-240 {
+    display: none;
+  }
+  .table-Beneficiaries-column-240 {
+    display: none;
+  }
+  .table-Inventory-Sent-column-240 {
+    display: none;
+  }
+}
+@container (max-width:360px) {
+  .table-Dashboard-One-Time-Donations-column-360 {
+    display: none;
+  }
+  .table-Dashboard-Recurring-Donations-column-360 {
+    display: none;
+  }
+  .table-Inventory-Sent-column-360 {
+    display: none;
+  }
+}
+@container (max-width:480px) {
+  .table-Dashboard-One-Time-Donations-column-480 {
+    display: none;
+  }
+  .table-Dashboard-Recurring-Donations-column-480 {
+    display: none;
+  }
+}
+@container (max-width:600px) {
+  .table-Dashboard-Recurring-Donations-column-600 {
+    display: none;
+  }
+}
