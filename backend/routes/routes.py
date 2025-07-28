@@ -175,7 +175,7 @@ def charities():
 @cross_origin()
 def donor_signup():
     if request.method == "OPTIONS":
-        return '', 200
+        return jsonify({}), 200
 
     data = request.get_json()
     name = data.get("name")
@@ -202,6 +202,7 @@ def donor_signup():
 
 @api.route("/donor-dashboard", methods=["GET"])
 @jwt_required()
+@cross_origin()
 def donor_dashboard():
     try:
         identity = get_jwt_identity()
@@ -284,66 +285,71 @@ def donor_dashboard():
         }), 500
 
 @api.route('/api/donate', methods=['POST', 'OPTIONS'])
-@jwt_required(optional=True)
+@cross_origin()
 def donate():
     if request.method == 'OPTIONS':
-        return jsonify({'message': 'Preflight successful'}), 200
-
-    current_user = get_jwt_identity()
-    if not current_user or current_user.get('role') != 'donor':
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'No data provided'}), 400
-
-    required_fields = ['charity_id', 'amount']
-    if not all(field in data for field in required_fields):
-        return jsonify({'error': 'Missing required fields'}), 400
-
+        return '', 200  # Return empty body with 200 OK to satisfy preflight
     try:
-        charity_id = int(data['charity_id'])
-        amount = float(data['amount'])
-        frequency = data.get('frequency', 'one-time')
-        anonymous = bool(data.get('anonymous', False))
-        
-        if amount <= 0:
-            return jsonify({'error': 'Amount must be positive'}), 400
+        current_user = get_jwt_identity()
+        if not current_user or current_user.get('role') != 'donor':
+            return jsonify({'error': 'Unauthorized'}), 401
 
-        charity = Charity.query.get(charity_id)
-        if not charity:
-            return jsonify({'error': 'Charity not found'}), 404
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
 
-        donor = Donor.query.filter_by(email=current_user['email']).first()
-        if not donor:
-            return jsonify({'error': 'Donor not found'}), 404
+        required_fields = ['charity_id', 'amount']
+        if not all(field in data for field in required_fields):
+            return jsonify({'error': 'Missing required fields'}), 400
 
-        donation = Donation(
-            donor_id=donor.id,
-            charity_id=charity.id,
-            amount=amount,
-            frequency=frequency,
-            is_anonymous=anonymous,
-            donor_name='Anonymous' if anonymous else donor.name
-        )
+        try:
+            charity_id = int(data['charity_id'])
+            amount = float(data['amount'])
+            frequency = data.get('frequency', 'one-time')
+            anonymous = bool(data.get('anonymous', False))
+            
+            if amount <= 0:
+                return jsonify({'error': 'Amount must be positive'}), 400
 
-        db.session.add(donation)
-        
-        if charity not in donor.charities:
-            donor.charities.append(charity)
+            charity = Charity.query.get(charity_id)
+            if not charity:
+                return jsonify({'error': 'Charity not found'}), 404
 
-        db.session.commit()
+            donor = Donor.query.filter_by(email=current_user['email']).first()
+            if not donor:
+                return jsonify({'error': 'Donor not found'}), 404
 
-        return jsonify({
-            'message': 'Donation successful',
-            'donation_id': donation.id
-        }), 201
+            donation = Donation(
+                donor_id=donor.id,
+                charity_id=charity.id,
+                amount=amount,
+                frequency=frequency,
+                is_anonymous=anonymous,
+                donor_name='Anonymous' if anonymous else donor.name
+            )
 
-    except ValueError:
-        return jsonify({'error': 'Invalid data format'}), 400
+            db.session.add(donation)
+            
+            if charity not in donor.charities:
+                donor.charities.append(charity)
+
+            db.session.commit()
+
+            return jsonify({
+                'message': 'Donation successful',
+                'donation_id': donation.id
+            }), 201
+
+        except ValueError:
+            return jsonify({'error': 'Invalid data format'}), 400
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Donation error: {str(e)}\n{traceback.format_exc()}")
+            return jsonify({'error': str(e)}), 500
+
     except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        current_app.logger.error(f"CRITICAL Donation error: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 @api.route("/admin/charities", methods=["GET", "PUT"])
 @jwt_required()

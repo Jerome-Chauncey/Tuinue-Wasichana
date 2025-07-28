@@ -12,18 +12,29 @@ const Donate = () => {
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
-    
     useEffect(() => {
         const fetchCharities = async () => {
             try {
-                const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/charities`);
+                const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/charities`, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    withCredentials: true // Align with backend CORS credentials
+                });
+                console.log('Charities response:', response.data); // Debug response
                 setCharities(response.data.filter(c => c.status === 'Active'));
             } catch (error) {
+                console.error('Error fetching charities:', error);
+                let errorMessage = 'Failed to load charities. Please try again later.';
+                if (error.response) {
+                    errorMessage = error.response.data?.error || `Error: ${error.response.status}`;
+                } else if (error.request) {
+                    errorMessage = 'Network error. Check your connection or API URL.';
+                }
                 setMessage({
-                    text: 'Failed to load charities. Please try again later.',
+                    text: errorMessage,
                     type: 'error'
                 });
-                console.error('Error fetching charities:', error);
             }
         };
         fetchCharities();
@@ -57,7 +68,7 @@ const Donate = () => {
             const response = await axios.post(
                 `${import.meta.env.VITE_API_BASE_URL}/api/donate`,
                 {
-                    charity_id: charityId,
+                    charity_id: parseInt(charityId), // Ensure charity_id is an integer
                     amount: parseFloat(amount),
                     frequency,
                     anonymous
@@ -75,7 +86,7 @@ const Donate = () => {
                 text: 'Donation successful! Thank you for your generosity.',
                 type: 'success'
             });
-            
+
             // Reset form
             setAmount('');
             setCharityId('');
@@ -84,14 +95,16 @@ const Donate = () => {
 
         } catch (error) {
             console.error('Donation error:', error);
-            
             let errorMessage = 'Donation failed. Please try again.';
             if (error.response) {
                 if (error.response.status === 401) {
+                    localStorage.removeItem('token');
                     navigate('/login');
                     return;
                 }
                 errorMessage = error.response.data?.error || errorMessage;
+            } else if (error.request) {
+                errorMessage = 'Network error. Check your connection or API URL.';
             }
 
             setMessage({
@@ -125,11 +138,15 @@ const Donate = () => {
                         required
                     >
                         <option value="">-- Choose a charity --</option>
-                        {charities.map((charity) => (
-                            <option key={charity.id} value={charity.id}>
-                                {charity.name} - {charity.mission.substring(0, 50)}...
-                            </option>
-                        ))}
+                        {charities.length > 0 ? (
+                            charities.map((charity) => (
+                                <option key={charity.id} value={charity.id}>
+                                    {charity.name} - {charity.mission.substring(0, 50)}...
+                                </option>
+                            ))
+                        ) : (
+                            <option disabled>No charities available</option>
+                        )}
                     </select>
                 </div>
 
