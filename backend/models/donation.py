@@ -18,7 +18,7 @@ class Donation(db.Model):
     created_at = db.Column(DateTime, default=datetime.utcnow)
 
     donor = db.relationship("Donor", back_populates="donations")
-
+    charity = db.relationship("Charity", back_populates="donations")
 
     def __repr__(self):
         return f"<Donation ${self.amount}>"

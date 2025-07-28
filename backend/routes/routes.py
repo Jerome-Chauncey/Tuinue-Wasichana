@@ -207,8 +207,14 @@ def donor_signup():
     return jsonify({"message": "Donor registered successfully"}), 201
 
 
+from flask import Blueprint, jsonify, request, current_app
+from flask_jwt_extended import jwt_required, get_jwt_identity
+import traceback
+
+api = Blueprint('api', __name__)
+
 @api.route('/donor-dashboard', methods=['GET', 'OPTIONS'])
-@jwt_required(optional=True)  # Allow OPTIONS without auth
+@jwt_required(optional=True)
 def donor_dashboard():
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'preflight'})
@@ -220,25 +226,35 @@ def donor_dashboard():
 
     try:
         current_user = get_jwt_identity()
+        current_app.logger.info(f"Current user: {current_user}")
         if not current_user or current_user.get('role') != 'donor':
             return jsonify({'error': 'Unauthorized'}), 403
 
         donor = Donor.query.filter_by(email=current_user['email']).first()
+        current_app.logger.info(f"Donor found: {donor.id if donor else None}")
         if not donor:
             return jsonify({'error': 'Donor not found'}), 404
 
-        # Serialize donations
-        donations = [{
-            'id': d.id,
-            'charity_id': d.charity_id,
-            'charity_name': d.charity.name if d.charity else None,
-            'amount': float(d.amount),
-            'frequency': d.frequency,
-            'date': d.date.isoformat() if d.date else None,
-            'is_anonymous': d.is_anonymous
-        } for d in donor.donations]
+        donations = []
+        for d in donor.donations:
+            current_app.logger.info(f"Processing donation: id={d.id}, charity_id={d.charity_id}")
+            try:
+                donation_data = {
+                    'id': d.id,
+                    'charity_id': d.charity_id,
+                    'charity_name': d.charity.name if d.charity else None,
+                    'amount': float(d.amount) if d.amount is not None else 0.0,
+                    'frequency': d.frequency,
+                    'donationType': d.frequency,  # Map frequency to donationType
+                    'date': d.date.isoformat() if d.date else None,
+                    'is_anonymous': d.is_anonymous,
+                    'start_date': d.date.isoformat() if d.date else None,  # Fallback for recurring
+                    'billing_date': d.date.isoformat() if d.date else None  # Fallback
+                }
+                donations.append(donation_data)
+            except Exception as e:
+                current_app.logger.error(f"Error processing donation {d.id}: {str(e)}")
 
-        # Serialize charities
         charities = [{
             'id': c.id,
             'name': c.name,
@@ -246,15 +262,22 @@ def donor_dashboard():
             'logo_url': c.logo_url
         } for c in donor.charities]
 
-        # Serialize stories
-        stories = [{
-            'id': s.id,
-            'title': s.title,
-            'description': s.description,
-            'image': s.image,
-            'charity_name': s.charity.name,
-            'created_at': s.created_at.isoformat() if s.created_at else None
-        } for c in donor.charities for s in c.stories]
+        stories = []
+        for c in donor.charities:
+            current_app.logger.info(f"Processing charity stories: {c.id}")
+            for s in c.stories:
+                try:
+                    stories.append({
+                        'id': s.id,
+                        'title': s.title,
+                        'description': s.description,
+                        'image': s.image,
+                        'charity_name': s.charity.name if s.charity else None,
+                        'charity': s.charity.name if s.charity else None,  # Added for frontend
+                        'created_at': s.created_at.isoformat() if s.created_at else None
+                    })
+                except Exception as e:
+                    current_app.logger.error(f"Error processing story {s.id}: {str(e)}")
 
         response = jsonify({
             'name': donor.name,
@@ -263,15 +286,12 @@ def donor_dashboard():
             'charities': charities,
             'stories': stories
         })
-        
-        # Add CORS headers to main response
         response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
         response.headers.add('Access-Control-Allow-Credentials', 'true')
-        
         return response, 200
 
     except Exception as e:
-        current_app.logger.error(f'Donor dashboard error: {str(e)}')
+        current_app.logger.error(f'Donor dashboard error: {str(e)}, Traceback: {traceback.format_exc()}')
         return jsonify({'error': 'Internal server error'}), 500
     
 
@@ -279,9 +299,8 @@ def donor_dashboard():
 
 
 @api.route('/donate', methods=['POST', 'OPTIONS'])
-@jwt_required(optional=True)  
+@jwt_required(optional=True)
 def donate():
-    # Handle preflight request
     if request.method == 'OPTIONS':
         response = jsonify({'message': 'Preflight successful'})
         response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
@@ -290,17 +309,14 @@ def donate():
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response, 200
 
-    
     current_user = get_jwt_identity()
     if not current_user or current_user.get('role') != 'donor':
         return jsonify({'error': 'Unauthorized'}), 401
 
-    
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No data provided'}), 400
 
-   
     required_fields = ['charity_id', 'amount']
     if not all(field in data for field in required_fields):
         return jsonify({'error': 'Missing required fields'}), 400
@@ -310,37 +326,31 @@ def donate():
         amount = float(data['amount'])
         frequency = data.get('frequency', 'one-time')
         anonymous = bool(data.get('anonymous', False))
-        
-        # Validate amount
+
         if amount <= 0:
             return jsonify({'error': 'Amount must be positive'}), 400
 
-        # Check charity exists
         charity = Charity.query.get(charity_id)
         if not charity:
             return jsonify({'error': 'Charity not found'}), 404
 
-        # Get donor
         donor = Donor.query.filter_by(email=current_user['email']).first()
         if not donor:
             return jsonify({'error': 'Donor not found'}), 404
 
-        # Create donation
         donation = Donation(
             donor_id=donor.id,
             charity_id=charity.id,
             amount=amount,
             frequency=frequency,
             is_anonymous=anonymous,
-            donor_name='Anonymous' if anonymous else donor.name
+            donor_name='Anonymous' if anonymous else donor.name,
+            date=datetime.utcnow()
         )
-
+        current_app.logger.info(f"Created donation: id={donation.id}, amount={donation.amount}, frequency={donation.frequency}, date={donation.date}")
         db.session.add(donation)
-        
-        # Update donor-charity relationship if needed
         if charity not in donor.charities:
             donor.charities.append(charity)
-
         db.session.commit()
 
         return jsonify({
@@ -348,10 +358,9 @@ def donate():
             'donation_id': donation.id
         }), 201
 
-    except ValueError:
-        return jsonify({'error': 'Invalid data format'}), 400
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"Donation error: {str(e)}, Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 
