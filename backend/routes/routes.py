@@ -200,10 +200,12 @@ def donor_signup():
 
     return jsonify({"message": "Donor registered successfully"}), 201
 
-@api.route('/api/donor-dashboard', methods=['GET'])
+@api.route('/api/donor-dashboard', methods=['GET', 'OPTIONS'])
 @jwt_required()
 @cross_origin()
-def donor_dashboard_api():
+def donor_dashboard():
+    if request.method == 'OPTIONS':
+        return '', 200
     try:
         identity = get_jwt_identity()
         if not identity or 'email' not in identity:

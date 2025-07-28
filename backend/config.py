@@ -17,19 +17,14 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
 
+    from flask_cors import CORS
+
     CORS(app,
         resources={
             r"/api/*": {
                 "origins": ["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"],
                 "supports_credentials": True,
                 "methods": ["GET", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"],
-                "allow_headers": ["Content-Type", "Authorization"],
-                "expose_headers": ["Content-Type", "Authorization"]
-            },
-            r"/donor-dashboard": {
-                "origins": ["http://localhost:5173", "https://tuinue-wasichana-ui-dw85.onrender.com"],
-                "supports_credentials": True,
-                "methods": ["GET", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
                 "expose_headers": ["Content-Type", "Authorization"]
             }

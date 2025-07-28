@@ -7,29 +7,58 @@ const DonorDashboard = () => {
   const navigate = useNavigate();
   const [donor, setDonor] = useState(null);
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-  const fetchDonorData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('https://tuinue-wasichana-api-jauh.onrender.com/donor-dashboard', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Required for cookies or Authorization
-      });
-      if (!response.ok) throw new Error('Failed to fetch');
-      const data = await response.json();
-      setDonorData(data);
-    } catch (error) {
-      console.error('Fetch error:', error);
-    }
-  };
+    const fetchDonorData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const response = await fetch('https://tuinue-wasichana-api-jauh.onrender.com/api/donor-dashboard', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem('token');
+            navigate('/login');
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setDonor(data);
+      } catch (error) {
+        console.error('Fetch error:', error);
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
     fetchDonorData();
-  }, [navigate]);
+  }, [navigate]);  // Added navigate as dependency
+
+  if (isLoading) {
+    return <div className="loading-spinner">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="error-message">Error: {error}</div>;
+  }
+
+  if (!donor) {
+    return <div>No donor data available</div>;
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("token");
