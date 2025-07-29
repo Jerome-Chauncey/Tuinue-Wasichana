@@ -14,11 +14,13 @@ import ThankYou from "./components/ThankYou";
 import Donations from "./components/Donations";
 import Stories from "./components/Stories";
 import Charities from "./components/Charities";
-import Donate from "./components/Donate"; // New import
+import Donate from "./components/Donate";
+import Taskbar from "./components/Navbar"; 
 
 const App = () => {
   return (
     <BrowserRouter>
+    <Taskbar />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
