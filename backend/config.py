@@ -27,10 +27,10 @@ def create_app():
     )
 
 
-    @app.before_request
-    def handle_options():
-        if request.method == 'OPTIONS':
-            return jsonify({}), 200
+    # @app.before_request
+    # def handle_options():
+    #     if request.method == 'OPTIONS':
+    #         return jsonify({}), 200
 
     db.init_app(app)
     jwt.init_app(app)
