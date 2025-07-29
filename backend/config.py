@@ -15,12 +15,17 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'default-secret-key')
     
     cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,https://tuinue-wasichana-ui-dw85.onrender.com').split(',')
-    
+
     CORS(
     app,
     origins=cors_origins,
-    supports_credentials=True
+    supports_credentials=True,
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    expose_headers=["Content-Type", "Authorization", "X-Total-Count"],
+    max_age=86400
     )
+
 
     @app.before_request
     def handle_options():
