@@ -19,11 +19,7 @@ def create_app():
     CORS(
     app,
     origins=cors_origins,
-    supports_credentials=True,
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-    expose_headers=["Content-Type", "Authorization", "X-Total-Count"],
-    max_age=86400
+    supports_credentials=True
     )
 
     @app.before_request
