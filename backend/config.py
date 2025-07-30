@@ -14,7 +14,10 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'default-secret-key')
     app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', 'default-secret-key')
     
-    cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,https://tuinue-wasichana-ui-dw85.onrender.com').split(',')
+    cors_origins = [origin.strip() for origin in os.environ.get(
+    'CORS_ORIGINS',
+    'http://localhost:5173,https://tuinue-wasichana-ui-dw85.onrender.com'
+    ).split(',')]
 
     CORS(
     app,
