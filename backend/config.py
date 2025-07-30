@@ -19,6 +19,7 @@ def create_app():
     'http://localhost:5173,https://tuinue-wasichana-ui-dw85.onrender.com'
     ).split(',')]
 
+    
     CORS(
     app,
     origins=cors_origins,
